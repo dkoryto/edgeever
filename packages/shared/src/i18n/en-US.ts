@@ -1681,6 +1681,7 @@ export const enUS = {
       toggleReadingProtection: { label: "Toggle reading protection" },
       toggleEditorMode: { label: "Switch editor mode" },
       toggleOutline: { label: "Show/hide document outline" },
+      toggleSidebar: { label: "Show/hide sidebar" },
     },
   },
   quickSwitcher: {

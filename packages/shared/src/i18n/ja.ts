@@ -1681,6 +1681,7 @@ export const ja = {
       toggleReadingProtection: { label: "閲覧保護を切り替え" },
       toggleEditorMode: { label: "エディタモードを切り替え" },
       toggleOutline: { label: "ドキュメントアウトラインの表示/非表示" },
+      toggleSidebar: { label: "サイドバーの表示/非表示" },
     },
   },
   quickSwitcher: {

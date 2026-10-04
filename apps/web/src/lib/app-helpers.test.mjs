@@ -445,6 +445,12 @@ describe("workspace shortcut preferences", () => {
       shift: true,
       alt: false,
     });
+    expect(DEFAULT_SHORTCUT_SETTINGS.toggleSidebar).toEqual({
+      key: "\\",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
   });
 
   test("migrates the unreleased reading protection shortcut without replacing custom bindings", () => {
@@ -532,6 +538,10 @@ describe("workspace shortcut preferences", () => {
       keyboardEvent("!", { code: "Digit1", ctrlKey: true, shiftKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
     )).toBe("toggleOutline");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("\\", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("toggleSidebar");
   });
 });
 

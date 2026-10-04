@@ -1681,6 +1681,7 @@ export const zhCN = {
       toggleReadingProtection: { label: "切换阅读保护" },
       toggleEditorMode: { label: "切换编辑模式" },
       toggleOutline: { label: "显示/隐藏文档大纲" },
+      toggleSidebar: { label: "显示/隐藏侧边栏" },
     },
   },
   quickSwitcher: {

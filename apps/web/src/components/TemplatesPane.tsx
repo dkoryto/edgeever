@@ -15,6 +15,7 @@ import {
   FilePlus
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { marked } from "marked";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,9 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { ClipboardCopyNotice } from "@/components/ClipboardCopyNotice";
 import type { MemoTemplate as SavedMemoTemplate } from "@edgeever/shared";
 import { ExecutionCenterButton } from "@/components/execution/ExecutionCenterButton";
+import { AiTemplateGeneratorDialog } from "@/components/AiTemplateGeneratorDialog";
+import { resolveBuiltinAgentModel } from "@/components/ai-sidebar/builtin-agent-model";
+import { api } from "@/lib/api";
 
 const TemplateIconAction = ({
   children,
@@ -55,6 +59,48 @@ const TemplateIconAction = ({
   </Tooltip>
 );
 
+const AiTemplateGenerateButton = ({
+  disabled,
+  loading,
+  onClick,
+  ready,
+}: {
+  disabled: boolean;
+  loading: boolean;
+  onClick: () => void;
+  ready: boolean;
+}) => {
+  const { t } = useTranslation();
+  const className = "gap-1.5 border-slate-200 bg-card text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs";
+  if (ready || loading) {
+    return (
+      <Button type="button" size="sm" variant="outline" className={className} onClick={onClick} disabled={disabled || loading}>
+        <Sparkles className="h-3.5 w-3.5 text-slate-700" />
+        {t("templates.aiGenerateAction")}
+      </Button>
+    );
+  }
+  // Disabled buttons do not receive focus or pointer events, so the guidance lives on a focusable wrapper.
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          data-ai-template-unavailable=""
+          tabIndex={0}
+          aria-label={`${t("templates.aiGenerateAction")}. ${t("templates.aiConfigureModel")}`}
+        >
+          <Button type="button" size="sm" variant="outline" className={`${className} pointer-events-none`} disabled tabIndex={-1} aria-hidden="true">
+            <Sparkles className="h-3.5 w-3.5 text-slate-700" />
+            {t("templates.aiGenerateAction")}
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs">{t("templates.aiConfigureModel")}</TooltipContent>
+    </Tooltip>
+  );
+};
+
 export const TemplatesPane = ({
   canCreateMemo,
   isCreating,
@@ -76,7 +122,17 @@ export const TemplatesPane = ({
   onUpdateSavedTemplate: (templateId: string, payload: { name: string; description: string | null; title: string | null; contentMarkdown: string; tags: string[] }) => Promise<void>;
   onOpenExecutionCenter: () => void;
 }) => {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language;
+  const aiSettingsQuery = useQuery({
+    queryKey: ["ai-settings", locale],
+    queryFn: () => api.getAiSettings(locale),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const aiModel = aiSettingsQuery.isSuccess ? resolveBuiltinAgentModel(aiSettingsQuery.data) : null;
+  const aiTemplateReady = Boolean(aiModel && !aiModel.unavailable);
+  const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<SavedMemoTemplate | null>(null);
   const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [draft, setDraft] = useState({ name: "", description: "", title: "", contentMarkdown: "", tags: "" });
@@ -196,17 +252,25 @@ export const TemplatesPane = ({
                 </h2>
               </div>
               {!creatingTemplate && !editingTemplate && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 border-slate-200 bg-card text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs"
-                  onClick={startCreating}
-                  disabled={isCreating}
-                >
-                  <Plus className="h-3.5 w-3.5 text-slate-700" />
-                  {t("templates.create")}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <AiTemplateGenerateButton
+                    disabled={isCreating}
+                    loading={aiSettingsQuery.isPending}
+                    onClick={() => setAiGeneratorOpen(true)}
+                    ready={aiTemplateReady}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 border-slate-200 bg-card text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs"
+                    onClick={startCreating}
+                    disabled={isCreating}
+                  >
+                    <Plus className="h-3.5 w-3.5 text-slate-700" />
+                    {t("templates.create")}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -510,6 +574,14 @@ export const TemplatesPane = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {aiGeneratorOpen && (
+        <AiTemplateGeneratorDialog
+          isSaving={isCreating}
+          onClose={() => setAiGeneratorOpen(false)}
+          onSave={onCreateSavedTemplate}
+        />
       )}
 
       {/* Delete Confirmation Dialog */}

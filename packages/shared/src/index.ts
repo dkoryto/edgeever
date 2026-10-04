@@ -6,6 +6,7 @@ export * from "./ai-assistant";
 export * from "./ai-generation";
 export * from "./ai-prompt-seeds";
 export * from "./ai-tag-suggestions";
+export * from "./ai-template-generation";
 export * from "./ai-selection";
 export * from "./attachment-kind";
 export * from "./attachment-metadata";

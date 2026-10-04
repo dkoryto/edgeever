@@ -25,6 +25,13 @@ import {
   type StoredImageFailure,
 } from "./image-clip";
 import {
+  embedPageImages,
+  MAX_PAGE_IMAGE_TOTAL_BYTES,
+  pageImageRefs,
+  readPageImagesInPage,
+  type PageImageRef,
+} from "./page-images";
+import {
   githubRepoFactsFromSource,
   githubRepoNoteMarkdown,
   githubRepoNoteTitle,
@@ -173,16 +180,18 @@ const notebookForClip = async (settings: ExtensionSettings) => {
   return notebookId;
 };
 
-const createMemo = async (settings: ExtensionSettings, page: CapturedPage) => {
-  await edgeEverRequest(settings, "/api/v1/memos", {
+const createMemo = async (settings: ExtensionSettings, page: CapturedPage, tabId: number | null) => {
+  const contentMarkdown = toMarkdown(page);
+  const created = await edgeEverRequest<{ memo?: { id?: string } }>(settings, "/api/v1/memos", {
     method: "POST",
     body: JSON.stringify({
       notebookId: await notebookForClip(settings),
       title: page.title,
-      contentMarkdown: toMarkdown(page),
+      contentMarkdown,
       tags: ["web-clip"],
     }),
   });
+  await embedClipImages(settings, created.memo?.id, contentMarkdown, page.url, tabId, null);
 };
 
 const createGithubRepoMemo = async (settings: ExtensionSettings, facts: GithubRepoFacts) => {
@@ -361,7 +370,7 @@ const downloadImage = async (urls: string[]): Promise<StoredImage | StoredImageF
     if (!/^https?:/i.test(url)) continue;
     for (const credentials of ["omit", "include"] as const) {
       try {
-        const response = await fetch(url, { credentials });
+        const response = await fetch(url, { credentials, signal: AbortSignal.timeout(15000) });
         if (!response.ok) continue;
         const declared = Number(response.headers.get("content-length"));
         if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
@@ -378,6 +387,68 @@ const downloadImage = async (urls: string[]): Promise<StoredImage | StoredImageF
   }
   if (matchError === "too-large" || matchError === "unsupported") return { error: matchError };
   return { error: "unreadable" };
+};
+
+const PAGE_IMAGE_DOWNLOAD_BUDGET_MS = 45_000;
+
+const downloadPageImages = async (
+  tabId: number | null,
+  frameId: number | null,
+  images: readonly PageImageRef[],
+) => {
+  // Slow image hosts must not hold the save open: images not read within the
+  // budget keep their remote addresses.
+  const deadline = Date.now() + PAGE_IMAGE_DOWNLOAD_BUDGET_MS;
+  const downloaded = new Map<string, StoredImage>();
+  const missing: string[] = [];
+  for (const image of images) {
+    if (Date.now() > deadline) break;
+    const file = await downloadImage([image.url]);
+    if ("error" in file) missing.push(image.url);
+    else downloaded.set(image.url, file);
+  }
+  if (missing.length === 0 || tabId === null || Date.now() > deadline) return downloaded;
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: scriptTarget(tabId, frameId),
+      func: readPageImagesInPage,
+      args: [missing, MAX_IMAGE_BYTES, MAX_PAGE_IMAGE_TOTAL_BYTES],
+    });
+    const reads: unknown = injection?.result;
+    if (!Array.isArray(reads)) return downloaded;
+    for (const read of reads) {
+      if (!read || typeof read.url !== "string" || typeof read.base64 !== "string") continue;
+      const file = imageFromBase64(read.base64, typeof read.type === "string" ? read.type : "");
+      if (!("error" in file)) downloaded.set(read.url, file);
+    }
+  } catch {
+    // The page cannot be scripted; those images keep their remote addresses.
+  }
+  return downloaded;
+};
+
+const embedClipImages = async (
+  settings: ExtensionSettings,
+  memoId: string | undefined,
+  markdown: string,
+  pageUrl: string,
+  tabId: number | null,
+  frameId: number | null,
+) => {
+  if (!memoId) return;
+  const images = pageImageRefs(markdown, pageUrl);
+  if (images.length === 0) return;
+  try {
+    await embedPageImages(imageNoteClient(settings), {
+      memoId,
+      markdown,
+      images,
+      download: (refs) => downloadPageImages(tabId, frameId, refs),
+    });
+  } catch {
+    // The note is already saved; reporting a failure here would invite a
+    // duplicate save. Its images keep their remote addresses.
+  }
 };
 
 const hasImagePermission = async (urls: string[]) => {
@@ -1257,21 +1328,24 @@ const saveSelectionFromMenu = async (
     const markdown = fromSelection?.markdown.trim() || browserSelection;
     const plain = fromSelection?.plainText?.trim() || browserSelection || markdown;
     if (!markdown.trim()) throw new Error(t("selectionEmpty"));
-    await edgeEverRequest(settings, "/api/v1/memos", {
+    const sourceUrl = fromSelection?.url || pageUrl;
+    const contentMarkdown = selectionNoteMarkdown({
+      markdown,
+      pageUrl: sourceUrl,
+      capturedAt: new Date().toISOString(),
+      sourceLabel: t("sourceLabel"),
+      capturedAtLabel: t("capturedAtLabel"),
+    });
+    const created = await edgeEverRequest<{ memo?: { id?: string } }>(settings, "/api/v1/memos", {
       method: "POST",
       body: JSON.stringify({
         notebookId: await notebookForClip(settings),
         title: selectionNoteTitle(plain, pageTitle, t("selectionNoteFallbackTitle")),
-        contentMarkdown: selectionNoteMarkdown({
-          markdown,
-          pageUrl: fromSelection?.url || pageUrl,
-          capturedAt: new Date().toISOString(),
-          sourceLabel: t("sourceLabel"),
-          capturedAtLabel: t("capturedAtLabel"),
-        }),
+        contentMarkdown,
         tags: ["web-clip"],
       }),
     });
+    await embedClipImages(settings, created.memo?.id, contentMarkdown, sourceUrl, tabId, frameId);
     await showFeedback(tabId, frameId, t("selectionSaved"), "success");
   } catch (error) {
     const message = describeSelectionError(error);
@@ -1593,7 +1667,7 @@ chrome.runtime.onMessage.addListener((message: { type?: string; page?: CapturedP
         }
 
         const page = await readCapturedPage(tab.id, null, "page");
-        await createMemo(settings, page);
+        await createMemo(settings, page, tab.id);
         sendResponse({ ok: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : "";

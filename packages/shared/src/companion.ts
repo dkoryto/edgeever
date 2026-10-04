@@ -34,7 +34,7 @@ export const CompanionTurnInputSchema = z.object({
   useMemory: z.boolean().default(true),
   allowNotes: z.boolean().default(false),
   allowWrites: z.boolean().optional(),
-  locale: z.enum(["zh-CN", "en-US", "ja"]).default("en-US"),
+  locale: z.enum(["zh-CN", "en-US", "ja", "pl"]).default("en-US"),
   focus: CompanionTurnFocusSchema.optional(),
   mentions: z.array(CompanionMentionSchema).max(8).optional(),
   attachmentIds: z.array(z.string().uuid()).max(4).optional(),
@@ -48,9 +48,10 @@ const messageLanguage = (message: string): ConversationLanguage | null => {
   const request = message.trim().split(/[\n:：]/, 1)[0].slice(0, 200);
   // Sidebar translation actions generate localized prompts. Their wording is
   // interface text, not evidence of the user's conversation language.
-  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を)/iu.test(request)) return null;
+  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment)/iu.test(request)) return null;
   if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(request)) return "ja";
   if (/\p{Script=Han}/u.test(request)) return "zh-CN";
+  if (/[ąćęłńśźżĄĆĘŁŃŚŹŻ]/u.test(request)) return "pl";
   if (/[A-Za-z]{2,}/u.test(request)) return "en-US";
   return null;
 };
@@ -70,7 +71,7 @@ export const conversationLanguage = (
 export const translationTargetInstruction = (
   language: ReturnType<typeof conversationLanguage>,
 ): string => {
-  const name = language.locale === "zh-CN" ? "Simplified Chinese" : language.locale === "ja" ? "Japanese" : "English";
+  const name = language.locale === "zh-CN" ? "Simplified Chinese" : language.locale === "ja" ? "Japanese" : language.locale === "pl" ? "Polish" : "English";
   return `For a translation request without an explicit target language, use the language of the current user request, then recent user messages, and only then the interface language. The best available signal for this turn is ${name} (${language.source}). If the source text is mainly in another language, translate into ${name} without asking. If the source is already mainly in ${name}, use an explicit target from this same translation task; otherwise ask which other language the user wants. An explicit target for this text always takes precedence; an older request about different text does not.`;
 };
 

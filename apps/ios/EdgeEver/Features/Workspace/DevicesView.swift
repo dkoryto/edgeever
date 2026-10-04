@@ -31,7 +31,7 @@ struct DevicesView: View {
                                     sessions = (try? await env.session.client.listLoginDeviceSessions()) ?? []
                                 }
                             } label: {
-                                Text(env.preferences.t("注销", en: "Revoke"))
+                                Text(env.preferences.t("注销", en: "Revoke", pl: "Unieważnij"))
                             }
                         }
                     }
@@ -47,7 +47,7 @@ struct DevicesView: View {
                     sessions = (try? await env.session.client.listLoginDeviceSessions()) ?? []
                 }
             } label: {
-                Text(env.preferences.t("注销其他设备", en: "Sign out other devices"))
+                Text(env.preferences.t("注销其他设备", en: "Sign out other devices", pl: "Wyloguj inne urządzenia"))
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)

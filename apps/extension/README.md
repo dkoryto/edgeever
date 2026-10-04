@@ -22,7 +22,7 @@ The extension does not use a central relay service. The page content is sent dir
 
 ## Localization
 
-The extension uses the cross-browser `chrome.i18n` compatibility namespace. English is the fallback locale, and Simplified Chinese is available for browsers whose UI language is Chinese.
+The extension uses the cross-browser `chrome.i18n` compatibility namespace. English is the fallback locale. Simplified Chinese, Japanese, and Polish are available for browsers whose UI language matches.
 
 User-visible strings live in `public/_locales/<locale>/messages.json`. Add or update every supported locale when changing interface copy. Chrome Web Store listing translations are maintained separately in the developer dashboard; ready-to-paste English and Simplified Chinese copy is available in `STORE_LISTING.md`.
 

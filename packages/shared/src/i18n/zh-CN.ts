@@ -1256,6 +1256,7 @@ export const zhCN = {
       fr: "法语",
       de: "德语",
       pt: "葡萄牙语",
+      pl: "波兰语",
     },
     tone: "语气",
     tones: {
@@ -1348,11 +1349,13 @@ export const zhCN = {
           "zh-CN": "中文",
           en: "English",
           ja: "日本語",
+          pl: "Polski",
         },
         languageNames: {
           "zh-CN": "简体中文",
           en: "英文",
           ja: "日文",
+          pl: "波兰语",
         },
       },
       skills: {

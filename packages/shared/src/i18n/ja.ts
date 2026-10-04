@@ -765,6 +765,8 @@ export const ja = {
     imageCompressionAria: "ノート内の画像を圧縮する",
     showDescendantNotesTitle: "サブノートブックのノートを表示",
     showDescendantNotesAria: "親ノートブックにサブノートブックのノートを表示する",
+    spellcheckTitle: "スペルミスに下線を表示",
+    spellcheckAria: "ノートエディタでスペルミスの可能性がある語に下線を表示する",
     aiSelectionMenuTitle: "文字選択時に AI アシスタントを表示",
     aiSelectionMenuAria: "文字選択時に AI アシスタント操作を表示する",
     aiSpaceShortcutTitle: "空のブロックで Space から AI を開く",

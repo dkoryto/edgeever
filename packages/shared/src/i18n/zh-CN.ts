@@ -765,6 +765,8 @@ export const zhCN = {
     imageCompressionAria: "是否压缩笔记内图片",
     showDescendantNotesTitle: "父笔记本中显示子笔记本笔记",
     showDescendantNotesAria: "是否在父笔记本中显示子笔记本中的笔记",
+    spellcheckTitle: "标记拼写错误",
+    spellcheckAria: "是否在笔记编辑器中用波浪线标记可能的拼写错误",
     aiSelectionMenuTitle: "选中文字时显示 AI 助手",
     aiSelectionMenuAria: "选中文字时是否显示 AI 助手入口",
     aiSpaceShortcutTitle: "空白段落按 Space 唤起 AI",

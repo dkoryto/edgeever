@@ -765,6 +765,8 @@ export const enUS = {
     imageCompressionAria: "Compress note images",
     showDescendantNotesTitle: "Show notes from sub-notebooks",
     showDescendantNotesAria: "Show notes from sub-notebooks in parent notebooks",
+    spellcheckTitle: "Underline spelling mistakes",
+    spellcheckAria: "Underline possible spelling mistakes in the note editor",
     aiSelectionMenuTitle: "Show AI assistant when text is selected",
     aiSelectionMenuAria: "Show the AI assistant action when text is selected",
     aiSpaceShortcutTitle: "Open AI with Space in an empty block",

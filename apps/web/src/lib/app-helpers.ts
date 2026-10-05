@@ -587,6 +587,13 @@ export const shortcutBindingsEqual = (first: ShortcutBinding, second: ShortcutBi
   first.shift === second.shift &&
   first.alt === second.alt;
 
+// The sidebar shortcut only acts when the sidebar can be seen: Focus Mode hides
+// it, so toggling there would change a persisted state without any feedback.
+export const canToggleNotebookSidebar = ({ isDesktop, focusModeActive }: {
+  isDesktop: boolean;
+  focusModeActive: boolean;
+}) => isDesktop && !focusModeActive;
+
 export const getShortcutActionForEvent = (event: KeyboardEvent, settings: ShortcutSettings): ShortcutAction | null => {
   const eventBinding = shortcutBindingFromKeyboardEvent(event);
 

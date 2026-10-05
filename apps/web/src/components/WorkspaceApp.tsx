@@ -72,6 +72,7 @@ import {
   getSearchShortcutScope,
   getShortcutActionForEvent,
   formatShortcutBinding,
+  canToggleNotebookSidebar,
   getNotebookDropSortOrder,
   getNotebookMoveOptions,
   getMemoIdsNeedingMove,
@@ -2813,7 +2814,11 @@ export const WorkspaceApp = ({
 
       if (action === "toggleSidebar") {
         event.preventDefault();
-        if (event.repeat || event.isComposing || !isDesktop) {
+        if (
+          event.repeat
+          || event.isComposing
+          || !canToggleNotebookSidebar({ isDesktop, focusModeActive: desktopFocusModeActive })
+        ) {
           return;
         }
         setNotebookSidebarCollapsed(!notebookSidebarCollapsed);
@@ -2879,6 +2884,7 @@ export const WorkspaceApp = ({
     handleMobileSearch,
     shortcutSettings,
     isDesktop,
+    desktopFocusModeActive,
     notebookSidebarCollapsed,
     setNotebookSidebarCollapsed,
     emptyTrashConfirmationOpen,

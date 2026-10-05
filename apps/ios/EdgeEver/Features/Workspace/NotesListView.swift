@@ -7,6 +7,7 @@ struct NotesListView: View {
     @Binding var path: NavigationPath
     var onCreateNote: (() -> Void)? = nil
     var onCreateFromTemplate: (() -> Void)? = nil
+    var onCreateNotebook: (() -> Void)? = nil
 
     /// Whole-list settle + Pow jump once when data first becomes available this session.
     @State private var listEntranceSettled = false
@@ -62,11 +63,13 @@ struct NotesListView: View {
                 emptyCard(
                     title: env.preferences.t("暂无笔记本", en: "No notebooks", pl: "Brak notatników"),
                     description: env.preferences.t(
-                        "同步完成后，笔记本会出现在这里。可在桌面/Web 端创建笔记本。",
-                        en: "Notebooks appear after sync. Create them on desktop/web.",
-                        pl: "Notatniki pojawią się po synchronizacji. Utwórz je w wersji desktopowej lub webowej."
+                        "先创建一个笔记本，再开始记录。",
+                        en: "Create a notebook to start taking notes.",
+                        ja: "ノートブックを作成して記録を始めましょう。",
+                        pl: "Utwórz notatnik, aby zacząć robić notatki."
                     ),
-                    showCreate: false
+                    showCreate: false,
+                    showCreateNotebook: true
                 )
                 .transition(Motion.softFade)
             } else if store.memos.isEmpty && !store.isLoadingList {
@@ -446,7 +449,7 @@ struct NotesListView: View {
     }
 
     /// Android `memoListEmptyCard` + `emptyTitle` / `mutedText` + dual create actions.
-    private func emptyCard(title: String, description: String, showCreate: Bool) -> some View {
+    private func emptyCard(title: String, description: String, showCreate: Bool, showCreateNotebook: Bool = false) -> some View {
         VStack(spacing: 10) {
             Text(title)
                 .font(.system(size: 16, weight: AppTheme.heavy))
@@ -455,6 +458,19 @@ struct NotesListView: View {
                 .font(.system(size: 13))
                 .foregroundStyle(AppTheme.secondary)
                 .multilineTextAlignment(.center)
+            if showCreateNotebook, let onCreateNotebook {
+                Button(action: onCreateNotebook) {
+                    Label(env.preferences.t("新建笔记本", en: "New notebook", ja: "新しいノートブック", pl: "Nowy notatnik"), systemImage: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 38)
+                        .background(AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("emptyCreateNotebook")
+            }
             if showCreate, !store.notebooks.isEmpty {
                 HStack(spacing: 8) {
                     if let onCreateNote {

@@ -26,10 +26,10 @@ import {
 } from "./image-clip";
 import {
   embedPageImages,
-  MAX_PAGE_IMAGE_TOTAL_BYTES,
   pageImageRefs,
-  readPageImagesInPage,
-  type PageImageRef,
+  readBodyWithLimit,
+  readPageImageInPage,
+  type PageImageDownload,
 } from "./page-images";
 import {
   githubRepoFactsFromSource,
@@ -182,7 +182,7 @@ const notebookForClip = async (settings: ExtensionSettings) => {
 
 const createMemo = async (settings: ExtensionSettings, page: CapturedPage, tabId: number | null) => {
   const contentMarkdown = toMarkdown(page);
-  const created = await edgeEverRequest<{ memo?: { id?: string } }>(settings, "/api/v1/memos", {
+  const created = await edgeEverRequest<{ memo?: CreatedClipMemo }>(settings, "/api/v1/memos", {
     method: "POST",
     body: JSON.stringify({
       notebookId: await notebookForClip(settings),
@@ -191,7 +191,7 @@ const createMemo = async (settings: ExtensionSettings, page: CapturedPage, tabId
       tags: ["web-clip"],
     }),
   });
-  await embedClipImages(settings, created.memo?.id, contentMarkdown, page.url, tabId, null);
+  await embedClipImages(settings, created.memo, contentMarkdown, page.url, tabId, null);
 };
 
 const createGithubRepoMemo = async (settings: ExtensionSettings, facts: GithubRepoFacts) => {
@@ -226,8 +226,8 @@ const imageNoteClient = (settings: ExtensionSettings): ImageNoteClient => ({
     method: "POST",
     body: JSON.stringify(body),
   }),
-  uploadImage: async (memoId, file) => {
-    const uploaded = await uploadMemoImage(settings, memoId, file);
+  uploadImage: async (memoId, file, signal) => {
+    const uploaded = await uploadMemoImage(settings, memoId, file, signal);
     return uploaded.resource;
   },
   createEditSession: (memoId) => edgeEverRequest(
@@ -363,21 +363,36 @@ const persistImage = async (
   }
 };
 
-const downloadImage = async (urls: string[]): Promise<StoredImage | StoredImageFailure> => {
+const requestSignal = (timeoutMs: number, signal?: AbortSignal) => {
+  if (!signal) return AbortSignal.timeout(timeoutMs);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const timer = setTimeout(abort, timeoutMs);
+  controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+  if (signal.aborted) abort();
+  else signal.addEventListener("abort", abort, { once: true });
+  return controller.signal;
+};
+
+const downloadImage = async (
+  urls: string[],
+  { maxBytes = MAX_IMAGE_BYTES, timeoutMs = 15000, signal }: { maxBytes?: number; timeoutMs?: number; signal?: AbortSignal } = {},
+): Promise<StoredImage | StoredImageFailure> => {
   const matchUrl = urls[urls.length - 1] ?? "";
   let matchError: StoredImageFailure["error"] | "" = "";
   for (const url of urls) {
     if (!/^https?:/i.test(url)) continue;
     for (const credentials of ["omit", "include"] as const) {
+      if (signal?.aborted) return { error: "unreadable" };
       try {
-        const response = await fetch(url, { credentials, signal: AbortSignal.timeout(15000) });
+        const response = await fetch(url, { credentials, signal: requestSignal(timeoutMs, signal) });
         if (!response.ok) continue;
-        const declared = Number(response.headers.get("content-length"));
-        if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+        const bytes = await readBodyWithLimit(response, maxBytes);
+        if (!bytes) {
           if (url === matchUrl) matchError = "too-large";
           continue;
         }
-        const image = imageFromBytes(new Uint8Array(await response.arrayBuffer()), response.headers.get("content-type") ?? "");
+        const image = imageFromBytes(bytes, response.headers.get("content-type") ?? "");
         if (!("error" in image)) return image;
         if (url === matchUrl) matchError = image.error;
       } catch {
@@ -389,61 +404,49 @@ const downloadImage = async (urls: string[]): Promise<StoredImage | StoredImageF
   return { error: "unreadable" };
 };
 
-const PAGE_IMAGE_DOWNLOAD_BUDGET_MS = 45_000;
+type CreatedClipMemo = { id?: string; revision?: number; contentHash?: string };
 
-const downloadPageImages = async (
-  tabId: number | null,
-  frameId: number | null,
-  images: readonly PageImageRef[],
-) => {
-  // Slow image hosts must not hold the save open: images not read within the
-  // budget keep their remote addresses.
-  const deadline = Date.now() + PAGE_IMAGE_DOWNLOAD_BUDGET_MS;
-  const downloaded = new Map<string, StoredImage>();
-  const missing: string[] = [];
-  for (const image of images) {
-    if (Date.now() > deadline) break;
-    const file = await downloadImage([image.url]);
-    if ("error" in file) missing.push(image.url);
-    else downloaded.set(image.url, file);
-  }
-  if (missing.length === 0 || tabId === null || Date.now() > deadline) return downloaded;
-  try {
-    const [injection] = await chrome.scripting.executeScript({
-      target: scriptTarget(tabId, frameId),
-      func: readPageImagesInPage,
-      args: [missing, MAX_IMAGE_BYTES, MAX_PAGE_IMAGE_TOTAL_BYTES],
-    });
-    const reads: unknown = injection?.result;
-    if (!Array.isArray(reads)) return downloaded;
-    for (const read of reads) {
-      if (!read || typeof read.url !== "string" || typeof read.base64 !== "string") continue;
-      const file = imageFromBase64(read.base64, typeof read.type === "string" ? read.type : "");
-      if (!("error" in file)) downloaded.set(read.url, file);
+const downloadPageImage = (tabId: number | null, frameId: number | null): PageImageDownload =>
+  async (image, { maxBytes, timeoutMs, signal }) => {
+    const file = await downloadImage([image.url], { maxBytes, timeoutMs, signal });
+    if (!("error" in file)) return file;
+    if (tabId === null || signal.aborted) return null;
+    try {
+      const [injection] = await chrome.scripting.executeScript({
+        target: scriptTarget(tabId, frameId),
+        func: readPageImageInPage,
+        args: [image.url, maxBytes, timeoutMs],
+      });
+      const read: unknown = injection?.result;
+      if (!read || typeof read !== "object") return null;
+      const { base64, type } = read as { base64?: unknown; type?: unknown };
+      if (typeof base64 !== "string") return null;
+      const fromPage = imageFromBase64(base64, typeof type === "string" ? type : "");
+      return "error" in fromPage ? null : fromPage;
+    } catch {
+      // The page cannot be scripted; this image keeps its remote address.
+      return null;
     }
-  } catch {
-    // The page cannot be scripted; those images keep their remote addresses.
-  }
-  return downloaded;
-};
+  };
 
 const embedClipImages = async (
   settings: ExtensionSettings,
-  memoId: string | undefined,
+  memo: CreatedClipMemo | undefined,
   markdown: string,
   pageUrl: string,
   tabId: number | null,
   frameId: number | null,
 ) => {
-  if (!memoId) return;
+  if (!memo?.id || typeof memo.revision !== "number" || typeof memo.contentHash !== "string") return;
   const images = pageImageRefs(markdown, pageUrl);
   if (images.length === 0) return;
   try {
     await embedPageImages(imageNoteClient(settings), {
-      memoId,
+      memoId: memo.id,
       markdown,
+      created: { revision: memo.revision, contentHash: memo.contentHash },
       images,
-      download: (refs) => downloadPageImages(tabId, frameId, refs),
+      download: downloadPageImage(tabId, frameId),
     });
   } catch {
     // The note is already saved; reporting a failure here would invite a
@@ -1336,7 +1339,7 @@ const saveSelectionFromMenu = async (
       sourceLabel: t("sourceLabel"),
       capturedAtLabel: t("capturedAtLabel"),
     });
-    const created = await edgeEverRequest<{ memo?: { id?: string } }>(settings, "/api/v1/memos", {
+    const created = await edgeEverRequest<{ memo?: CreatedClipMemo }>(settings, "/api/v1/memos", {
       method: "POST",
       body: JSON.stringify({
         notebookId: await notebookForClip(settings),
@@ -1345,7 +1348,7 @@ const saveSelectionFromMenu = async (
         tags: ["web-clip"],
       }),
     });
-    await embedClipImages(settings, created.memo?.id, contentMarkdown, sourceUrl, tabId, frameId);
+    await embedClipImages(settings, created.memo, contentMarkdown, sourceUrl, tabId, frameId);
     await showFeedback(tabId, frameId, t("selectionSaved"), "success");
   } catch (error) {
     const message = describeSelectionError(error);

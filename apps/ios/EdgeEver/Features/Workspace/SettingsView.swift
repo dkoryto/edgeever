@@ -634,7 +634,7 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
         let language = env.preferences.localeCode == "system"
-            ? "\(env.preferences.resolvedLocale.identifier) (\(env.preferences.t("跟随系统", en: "Follow system")))"
+            ? "\(env.preferences.resolvedLocale.identifier) (\(env.preferences.t("跟随系统", en: "Follow system", pl: "Zgodnie z systemem")))"
             : env.preferences.resolvedLocale.identifier
         return [
             SystemInfoItem(label: env.preferences.t("版本", en: "Version", pl: "Wersja"), value: "v\(version)"),

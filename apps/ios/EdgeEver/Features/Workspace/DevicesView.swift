@@ -13,7 +13,7 @@ struct DevicesView: View {
                             Text(s.label ?? s.userAgent ?? s.id)
                                 .font(.system(size: 14, weight: .bold))
                                 .lineLimit(2)
-                            Text("\(s.isCurrent ? env.preferences.t("当前 · ", en: "Current · ") : "")\(s.lastSeenAt)")
+                            Text("\(s.isCurrent ? env.preferences.t("当前 · ", en: "Current · ", pl: "Bieżące · ") : "")\(s.lastSeenAt)")
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppTheme.secondary)
                         }

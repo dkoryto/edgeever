@@ -1686,6 +1686,7 @@ export const ja = {
       toggleReadingProtection: { label: "閲覧保護を切り替え" },
       toggleEditorMode: { label: "エディタモードを切り替え" },
       toggleOutline: { label: "ドキュメントアウトラインの表示/非表示" },
+      toggleSidebar: { label: "サイドバーの表示/非表示" },
     },
   },
   quickSwitcher: {
@@ -2507,7 +2508,7 @@ export const ja = {
     accessLevels: {
       full: {
         label: "フルアクセス",
-        description: "すべてのノート、ノートブック、タグ、添付の読み取り、作成、編集と、ノートのゴミ箱移動ができます。",
+        description: "すべてのノート、ノートブック、タグ、添付の読み取り、作成、編集、ノートのゴミ箱移動、および設定済みの既定モデルによる動画ノートの要約ができます。",
       },
       "read-only": {
         label: "読み取り専用",
@@ -2542,6 +2543,7 @@ export const ja = {
       "write:resources": "添付を管理",
       "read:tags": "タグを読む",
       "write:tags": "タグを管理",
+      "ai:generate": "動画ノートの要約を生成",
     },
   },
   advancedPlay: {

@@ -51,7 +51,7 @@ describe("editor spellcheck preference", () => {
     expect(events.at(-1)?.detail).toBe(true);
   });
 
-  test("falls back to enabled when local storage is unavailable", () => {
+  test("keeps an unsaved change in memory when local storage is unavailable", () => {
     const events = [];
     globalThis.window = {
       localStorage: {
@@ -67,5 +67,12 @@ describe("editor spellcheck preference", () => {
     expect(readEditorSpellcheckPreference()).toBe(true);
     expect(() => writeEditorSpellcheckPreference(false)).not.toThrow();
     expect(events.at(-1)?.detail).toBe(false);
+    expect(readEditorSpellcheckPreference()).toBe(false);
+
+    const { values } = installWindow();
+    writeEditorSpellcheckPreference(true);
+    expect(values.get(EDITOR_SPELLCHECK_STORAGE_KEY)).toBe("true");
+    values.set(EDITOR_SPELLCHECK_STORAGE_KEY, "false");
+    expect(readEditorSpellcheckPreference()).toBe(false);
   });
 });

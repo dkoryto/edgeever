@@ -1686,6 +1686,7 @@ export const pl = {
       toggleReadingProtection: { label: "Przełącz ochronę odczytu" },
       toggleEditorMode: { label: "Przełącz tryb edytora" },
       toggleOutline: { label: "Pokaż/ukryj konspekt dokumentu" },
+      toggleSidebar: { label: "Pokaż/ukryj pasek boczny" },
     },
   },
   quickSwitcher: {
@@ -2542,6 +2543,7 @@ export const pl = {
       "write:resources": "Zarządzanie załącznikami",
       "read:tags": "Odczyt tagów",
       "write:tags": "Zarządzanie tagami",
+      "ai:generate": "Generowanie podsumowań notatek wideo",
     },
   },
   advancedPlay: {

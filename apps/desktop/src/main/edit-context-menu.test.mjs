@@ -95,13 +95,20 @@ describe("desktop edit context menu", () => {
     expect(template.every((item) => item.type === "separator" || item.role)).toBe(true);
   });
 
-  test("context menu labels are localized for Chinese", () => {
+  test("context menu labels are localized for Chinese and Polish", () => {
     expect(desktopMenuCopy("zh-CN").pasteAsPlainText).toBe("粘贴为纯文本");
     expect(desktopMenuCopy("en").pasteAsPlainText).toBe("Paste as Plain Text");
+    const pl = desktopMenuCopy("pl-PL");
+    expect([pl.cut, pl.copy, pl.paste, pl.pasteAsPlainText, pl.selectAll, pl.addToDictionary, pl.copyLinkAddress]).toEqual([
+      "Wytnij", "Kopiuj", "Wklej", "Wklej jako zwykły tekst", "Zaznacz wszystko", "Dodaj do słownika", "Kopiuj adres linku",
+    ]);
+    expect(desktopMenuCopy("pl").file).toBe("Plik");
+    expect(desktopMenuCopy("plx").file).toBe("File");
   });
 
   test("every locale defines the same menu keys", () => {
     const keys = Object.keys(desktopMenuCopy("en")).sort();
     expect(Object.keys(desktopMenuCopy("zh")).sort()).toEqual(keys);
+    expect(Object.keys(desktopMenuCopy("pl")).sort()).toEqual(keys);
   });
 });

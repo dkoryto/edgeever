@@ -1256,6 +1256,7 @@ export const enUS = {
       fr: "French",
       de: "German",
       pt: "Portuguese",
+      pl: "Polish",
     },
     tone: "Tone",
     tones: {
@@ -1348,11 +1349,13 @@ export const enUS = {
           "zh-CN": "中文",
           en: "English",
           ja: "日本語",
+          pl: "Polski",
         },
         languageNames: {
           "zh-CN": "Simplified Chinese",
           en: "English",
           ja: "Japanese",
+          pl: "Polish",
         },
       },
       skills: {

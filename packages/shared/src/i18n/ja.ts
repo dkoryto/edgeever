@@ -1256,6 +1256,7 @@ export const ja = {
       fr: "フランス語",
       de: "ドイツ語",
       pt: "ポルトガル語",
+      pl: "ポーランド語",
     },
     tone: "トーン",
     tones: {
@@ -1348,11 +1349,13 @@ export const ja = {
           "zh-CN": "中文",
           en: "English",
           ja: "日本語",
+          pl: "Polski",
         },
         languageNames: {
           "zh-CN": "簡体字中国語",
           en: "英語",
           ja: "日本語",
+          pl: "ポーランド語",
         },
       },
       skills: {

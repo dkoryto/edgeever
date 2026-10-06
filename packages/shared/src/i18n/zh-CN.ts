@@ -765,6 +765,8 @@ export const zhCN = {
     imageCompressionAria: "是否压缩笔记内图片",
     showDescendantNotesTitle: "父笔记本中显示子笔记本笔记",
     showDescendantNotesAria: "是否在父笔记本中显示子笔记本中的笔记",
+    spellcheckTitle: "标记拼写错误",
+    spellcheckAria: "是否在笔记编辑器中用波浪线标记可能的拼写错误",
     aiSelectionMenuTitle: "选中文字时显示 AI 助手",
     aiSelectionMenuAria: "选中文字时是否显示 AI 助手入口",
     aiSpaceShortcutTitle: "空白段落按 Space 唤起 AI",
@@ -1681,6 +1683,7 @@ export const zhCN = {
       toggleReadingProtection: { label: "切换阅读保护" },
       toggleEditorMode: { label: "切换编辑模式" },
       toggleOutline: { label: "显示/隐藏文档大纲" },
+      toggleSidebar: { label: "显示/隐藏侧边栏" },
     },
   },
   quickSwitcher: {
@@ -2500,7 +2503,7 @@ export const zhCN = {
     accessLevels: {
       full: {
         label: "完全访问",
-        description: "可读取、创建和修改所有笔记、笔记本、标签及附件，并将笔记移入回收站。",
+        description: "可读取、创建和修改所有笔记、笔记本、标签及附件，将笔记移入回收站，并用已配置的默认模型生成视频笔记总结。",
       },
       "read-only": {
         label: "只读访问",
@@ -2535,6 +2538,7 @@ export const zhCN = {
       "write:resources": "管理附件",
       "read:tags": "读取标签",
       "write:tags": "管理标签",
+      "ai:generate": "生成视频笔记总结",
     },
   },
   advancedPlay: {

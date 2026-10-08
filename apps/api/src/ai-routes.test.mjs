@@ -107,6 +107,49 @@ const validSettings = {
 };
 
 describe("AI route contracts", () => {
+  test("speech settings stay encrypted and transcription requires a note-owned resource", async () => {
+    const app = createApp();
+    const { environment: databaseEnvironment } = createDatabaseEnvironment();
+    const saved = await app.request(
+      "/api/v1/ai/transcription-providers",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...validSettings, initialModelId: "whisper-1" }),
+      },
+      databaseEnvironment,
+    );
+    expect(saved.status).toBe(201);
+    const settings = await saved.json();
+    expect(JSON.stringify(settings)).not.toContain("secret");
+
+    const credentialPath = `/api/v1/ai/transcription-providers/${settings.providers[0].id}/direct-credential`;
+    const credential = await app.request(credentialPath, { method: "POST" }, databaseEnvironment);
+    expect(credential.status).toBe(200);
+    expect(credential.headers.get("Cache-Control")).toBe("no-store");
+    expect(await credential.json()).toEqual({ apiKey: "secret" });
+
+    const transcript = await app.request(
+      "/api/v1/memos/missing/resources/missing/transcription-target",
+      { method: "POST" },
+      databaseEnvironment,
+    );
+    expect(transcript.status).toBe(404);
+
+    const scopedApp = createApp({ currentAuth: { ...auth, kind: "agent", scopes: ["read:resources"] } });
+    const denied = await scopedApp.request(
+      "/api/v1/memos/missing/resources/missing/transcription-target",
+      { method: "POST" },
+      databaseEnvironment,
+    );
+    expect(denied.status).toBe(403);
+    const deniedCredential = await scopedApp.request(credentialPath, { method: "POST" }, databaseEnvironment);
+    expect(deniedCredential.status).toBe(403);
+    const otherWorkspaceApp = createApp({ currentAuth: { ...auth, workspaceId: "ws_other" } });
+    const otherWorkspaceCredential = await otherWorkspaceApp.request(credentialPath, { method: "POST" }, databaseEnvironment);
+    expect(otherWorkspaceCredential.status).toBe(404);
+  });
+
   test("accepts the shared semantic action catalog with required parameters", () => {
     for (const action of AI_ACTIONS) {
       const parsed = AiGenerateSchema.safeParse({

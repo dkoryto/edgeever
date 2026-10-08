@@ -319,6 +319,67 @@ describe.serial("page main world", () => {
     expect(calls).toEqual([]);
   });
 
+  test("loads a YouTube cover without cookies and skips a thumbnail the browser cannot read", async () => {
+    const calls = [];
+    const read = await withPage(() => {
+      const response = playerResponse(CURRENT_ID);
+      delete response.captions;
+      response.videoDetails.thumbnail = {
+        thumbnails: [
+          { url: "https://i.ytimg.com/vi_webp/x/maxresdefault.webp", width: 1920 },
+          { url: "https://i.ytimg.com/vi/x/hqdefault.jpg", width: 336 },
+        ],
+      };
+      globalThis.document = {
+        getElementById: (id) => id === "movie_player"
+          ? { getPlayerResponse: () => response }
+          : null,
+        querySelector: () => null,
+      };
+      globalThis.window = {};
+      globalThis.location = new URL(`https://www.youtube.com/watch?v=${CURRENT_ID}`);
+      globalThis.fetch = async (url, init) => {
+        calls.push({ url: String(url), credentials: init?.credentials });
+        if (String(url).includes("maxresdefault")) throw new TypeError("Failed to fetch");
+        return new Response(Uint8Array.from([1, 2, 3, 4]), {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      };
+    }, () => readYouTubeVideoInPage("zh-CN"));
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.thumbnail?.mimeType).toBe("image/jpeg");
+    expect(read.thumbnail?.base64).toBe(btoa("\u0001\u0002\u0003\u0004"));
+    expect(calls).toEqual([
+      { url: "https://i.ytimg.com/vi_webp/x/maxresdefault.webp", credentials: "omit" },
+      { url: "https://i.ytimg.com/vi/x/hqdefault.jpg", credentials: "omit" },
+    ]);
+  });
+
+  test("reads a Shorts player after the page function is serialized on its own", async () => {
+    const source = readYouTubeVideoInPage.toString();
+    expect(source).toContain("[A-Za-z0-9_-]{11}");
+    const readInPage = new Function(`return (${source})`)();
+    const read = await withPage(() => {
+      globalThis.document = {
+        getElementById: (id) => id === "shorts-player"
+          ? { getPlayerResponse: () => playerResponse(CURRENT_ID) }
+          : null,
+        querySelector: () => null,
+      };
+      globalThis.window = {};
+      globalThis.location = new URL(`https://www.youtube.com/shorts/${CURRENT_ID}`);
+      globalThis.fetch = async () => new Response("", { status: 404 });
+    }, () => readInPage("zh-CN"));
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.playerResponse.videoDetails.videoId).toBe(CURRENT_ID);
+    const captured = youtubeCaptureFromRead(`https://www.youtube.com/shorts/${CURRENT_ID}`, read);
+    expect(captured.ok && captured.capture.title).toBe("Current video");
+    expect(captured.ok && captured.capture.sourceUrl).toBe(`https://www.youtube.com/shorts/${CURRENT_ID}`);
+  });
+
   test("signs the Bilibili player query and never calls unsigned /x/player/v2", async () => {
     const source = readBilibiliVideoInPage.toString();
     expect(source).toContain("/x/player/wbi/v2");
@@ -594,6 +655,39 @@ test("omits the cover when the image upload fails and never hotlinks the thumbna
   expect(memos[0].contentMarkdown).not.toContain("EDGEVERRESOURCEID");
   expect(memos[0].contentMarkdown).not.toContain("ytimg.com");
   expect(memos[0].contentMarkdown).toContain("caption");
+  expect(memos[0].videoTranscript).toBeUndefined();
+  expect(uploaded[0].videoTranscript).toBeUndefined();
+  expect(memos[0].contentMarkdown).not.toContain("edgeever-video-v1");
+});
+
+test("saves a video without captions as a source note without queuing transcription", async () => {
+  const capture = {
+    platform: "youtube",
+    videoId: CURRENT_ID,
+    title: "Current video",
+    author: "Channel",
+    duration: 95,
+    sourceUrl: `https://www.youtube.com/watch?v=${CURRENT_ID}`,
+    chapters: [],
+    cues: [],
+    thumbnail: { bytes: new Uint8Array([1, 2, 3]), mimeType: "image/jpeg" },
+  };
+  const memos = [];
+  const uploaded = [];
+  await persistVideoNote({
+    notebookId: "nb_1",
+    capture,
+    labels: LABELS,
+    capturedOn: "2026-10-05",
+    attempt: null,
+    createMemo: async (body) => { memos.push(body); },
+    createWithImage: async (body) => { uploaded.push(body); throw new Error("missing write:resources"); },
+  });
+  expect(uploaded[0].videoTranscript).toBeUndefined();
+  expect(memos[0].videoTranscript).toBeUndefined();
+  expect(memos[0].contentMarkdown).toContain("这一集没有可用字幕");
+  expect(memos[0].contentMarkdown).toContain(`https://www.youtube.com/watch?v=${CURRENT_ID}`);
+  expect(memos[0].contentMarkdown).not.toContain("edgeever-video-v1");
 });
 
 test("keeps the video menu hosts away from the other page commands", () => {
@@ -646,7 +740,11 @@ test("ships the video-note phrases in the extension locales", () => {
   expect(zh.videoPageUnsupported.message).toBe("暂不支持这个页面");
   expect(zh.videoNotRead.message).toBe("没有读到这个视频");
   expect(zh.videoNoCaptions.message).toBe("这一集没有可用字幕");
-  for (const locale of ["en", "ja"]) {
+  const pl = messages("pl");
+  expect(pl.saveVideoNoteToEdgeEver.message).toBe("Zapisz notatkę z wideo w EdgeEver");
+  expect(pl.videoSummaryHeading.message).toBe("Podsumowanie");
+  expect(pl.videoTranscriptHeading.message).toBe("Transkrypcja");
+  for (const locale of ["en", "ja", "pl"]) {
     const catalog = messages(locale);
     for (const key of ["saveVideoNoteToEdgeEver", "videoNoteSaved", "videoTranscriptSaved", "videoPageUnsupported", "videoNotRead"]) {
       expect(catalog[key].message.length).toBeGreaterThan(0);

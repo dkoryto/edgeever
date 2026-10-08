@@ -230,7 +230,12 @@ export const persistVideoNote = async (input: {
   labels: VideoNoteLabels;
   capturedOn: string;
   attempt: OutlineAttempt | null;
-  createMemo: (body: { notebookId: string; title: string; contentMarkdown: string; tags: string[] }) => Promise<unknown>;
+  createMemo: (body: {
+    notebookId: string;
+    title: string;
+    contentMarkdown: string;
+    tags: string[];
+  }) => Promise<unknown>;
   createWithImage?: (body: {
     notebookId: string;
     title: string;
@@ -242,6 +247,12 @@ export const persistVideoNote = async (input: {
   }) => Promise<unknown>;
 }) => {
   const withCover = Boolean(input.capture.thumbnail && input.createWithImage);
+  const noteFields = (title: string, contentMarkdown: string) => ({
+    notebookId: input.notebookId,
+    title,
+    contentMarkdown,
+    tags: ["web-clip"] as string[],
+  });
   const note = videoNoteFromCapture({
     capture: input.capture,
     attempt: input.attempt,
@@ -252,10 +263,7 @@ export const persistVideoNote = async (input: {
   if (withCover && input.capture.thumbnail && input.createWithImage) {
     try {
       await input.createWithImage({
-        notebookId: input.notebookId,
-        title: note.title,
-        contentMarkdown: note.markdown,
-        tags: ["web-clip"],
+        ...noteFields(note.title, note.markdown),
         filename: filenameForCover(input.capture.thumbnail.mimeType),
         mimeType: input.capture.thumbnail.mimeType,
         bytes: input.capture.thumbnail.bytes,
@@ -274,11 +282,6 @@ export const persistVideoNote = async (input: {
       cover: "none",
     })
     : note;
-  await input.createMemo({
-    notebookId: input.notebookId,
-    title: plainNote.title,
-    contentMarkdown: plainNote.markdown,
-    tags: ["web-clip"],
-  });
+  await input.createMemo(noteFields(plainNote.title, plainNote.markdown));
   return plainNote;
 };

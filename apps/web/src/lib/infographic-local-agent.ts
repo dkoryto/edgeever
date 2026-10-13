@@ -1,6 +1,7 @@
 import { infographicRequestsTimeline } from "@edgeever/shared";
 import {
   cancelDesktopAcp,
+  desktopAcpNoteAccessErrorKey,
   promptDesktopAcp,
   subscribeDesktopAcp,
   type DesktopAcpEvent,
@@ -103,13 +104,15 @@ export const parseInfographicLocalReply = (raw: string, candidates: string[], pr
 };
 
 export const infographicLocalAgentErrorKey = (message: string, adapterId: string | null) => {
+  if (message === "workbuddy_credentials_unavailable") return "aiAssistant.agentSource.workbuddyCredentialsUnavailable";
   if (message === "needs_login") {
     return adapterId === "workbuddyCn" || adapterId === "workbuddyIntl"
       ? "aiAssistant.sidebar.workbuddyLoginRequired"
       : "aiAssistant.sidebar.localLoginRequired";
   }
   if (message === "agent_refused") return "aiAssistant.sidebar.agentRefused";
-  if (message === "note_access_unavailable") return "aiAssistant.sidebar.noteAccessUnavailable";
+  const noteAccessErrorKey = desktopAcpNoteAccessErrorKey(message);
+  if (noteAccessErrorKey) return noteAccessErrorKey;
   if (message === "not_installed" || message === "desktop_acp_unavailable") return "aiAssistant.sidebar.localMissing";
   return null;
 };

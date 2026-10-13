@@ -1,35 +1,20 @@
 {
-  "version": "1.101.0",
+  "version": "1.115.0",
   "changes": {
     "en-US": [
-      "Save YouTube and Bilibili watch pages as video notes, with page images and available captions kept in the note.",
-      "Transcribe audio and video attachments through a configured speech service, view transcripts inline, and test the service connection from settings.",
-      "Use EdgeEver in Polish, with more Android interface text translated into Chinese.",
-      "Browse a signed community plugin catalog alongside official plugins.",
-      "Edit mind maps as a Markdown outline, toggle the sidebar by keyboard, select notebooks by clicking their row, control spellcheck underlines, and use the standard desktop editing context menu.",
-      "Mobile interactions use calmer motion, and login shows clearer guidance when a session is missing.",
-      "Improve sync conflict cleanup, API and notebook deletion errors, and structured table creation with the AI assistant.",
-      "Refresh the feature showcases, AI database examples, deployment guidance, and Evernote comparison across the guides."
+      "Show instance-wide and per-account attachment storage usage in member management, with clearer usage labels. (#553)",
+      "Improve inline code styling and the visibility of editor regions, including formatting copied to WeChat.",
+      "Show safe diagnostics for failed AI companion requests to help identify connection and provider errors. (#555)"
     ],
     "zh-CN": [
-      "可将 YouTube 和哔哩哔哩观看页保存为视频笔记，并将页面图片和可用字幕保留在笔记中。",
-      "可通过已配置的语音服务转写音视频附件，在笔记中直接查看结果，并从设置中测试服务连接。",
-      "EdgeEver 新增波兰语，并补全更多 Android 界面的中文翻译。",
-      "可在官方插件旁浏览带签名的社区插件目录。",
-      "思维导图支持 Markdown 大纲编辑；还可用快捷键切换侧栏、点击整行选择笔记本、设置拼写检查下划线，并使用桌面标准编辑右键菜单。",
-      "移动端交互动效更加平稳，登录后缺少会话时也会给出更清晰的提示。",
-      "改进同步冲突清理、API 与笔记本删除错误提示，以及 AI 助手创建结构化表格的能力。",
-      "更新功能展示、AI 数据库示例、部署说明和各语言的 Evernote 对比指南。"
+      "在成员管理中展示实例及各账号的附件存储占用，并明确已用空间标签。（#553）",
+      "优化行内代码样式和编辑区域辨识度，并改善复制到微信的格式。",
+      "AI 助手请求失败时显示安全的诊断信息，便于定位连接和服务商错误。（#555）"
     ],
     "ja": [
-      "YouTube と Bilibili の視聴ページを動画ノートとして保存し、ページ画像と利用可能な字幕をノートに保持できます。",
-      "設定した音声サービスで音声・動画の添付ファイルを文字起こしし、結果をノート内で表示し、設定画面から接続をテストできます。",
-      "EdgeEver にポーランド語を追加し、Android 画面の中国語訳を拡充しました。",
-      "公式プラグインと並んで、署名付きコミュニティプラグインのカタログを閲覧できます。",
-      "マインドマップを Markdown アウトラインで編集でき、ショートカットでサイドバーを切り替え、行をクリックしてノートブックを選択し、スペルチェックの下線を設定し、デスクトップの標準編集メニューを利用できます。",
-      "モバイルの動きを穏やかにし、ログイン後にセッションが見つからない場合の案内を改善しました。",
-      "同期の競合整理、API とノートブック削除時のエラー表示、AI アシスタントによる構造化テーブルの作成を改善しました。",
-      "機能紹介、AI データベースの例、導入ガイド、各言語の Evernote 比較を更新しました。"
+      "メンバー管理でインスタンス全体とアカウント別の添付ファイル使用量を表示し、使用済み容量の表記を明確にしました。",
+      "インラインコードと編集領域の視認性を改善し、WeChatへのコピー書式を調整しました。",
+      "AIアシスタントのリクエスト失敗時に安全な診断情報を表示し、接続やプロバイダーの問題を調べやすくしました。"
     ]
   }
 }

@@ -1,3 +1,4 @@
+import { AI_ASSISTANT_LAUNCHER_POSITION } from "@/lib/ai-assistant-launcher";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, Download, FileCode2, FileImage, LayoutTemplate, LoaderCircle, Pencil, Sparkles } from "lucide-react";
 import * as m from "motion/react-m";
@@ -633,8 +634,8 @@ export default function InfographicEditorPane({
     <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col">
     <header className="shrink-0 border-b border-slate-200 bg-card">
       <div className={cn(MEMO_EDITOR_TOP_ROW_CLASS_NAME, "border-b-0")}>
-        <div className="min-w-0 w-full" style={titleStatusClearancePx > 0 ? { paddingRight: titleStatusClearancePx } : undefined}>
-          <div ref={setHeaderTitleSlot} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 sm:flex-nowrap">
+        <div ref={setHeaderTitleSlot} className="min-w-0 w-full" style={titleStatusClearancePx > 0 ? { paddingRight: titleStatusClearancePx } : undefined}>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 sm:flex-nowrap">
             <MemoEditorTopRowLeading
               mobileBackButton={(
                 <IconTooltip label={t("common.back")}>
@@ -768,7 +769,7 @@ export default function InfographicEditorPane({
           variant="outline"
           size="icon"
           data-ai-assistant-launcher=""
-          className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-30 size-11 rounded-full border-slate-200 bg-card text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.14)] hover:bg-card hover:text-slate-950"
+          className={`${AI_ASSISTANT_LAUNCHER_POSITION} absolute z-30 size-11 rounded-full border-slate-200 bg-card text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.14)] hover:bg-card hover:text-slate-950`}
           aria-label={t("aiAssistant.open")}
           onClick={() => setAiSidebarOpen(true)}
         >

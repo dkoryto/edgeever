@@ -405,6 +405,7 @@ describe("companion HTTP contracts", () => {
     })() }) });
     const result = await (await request("turns", "POST", input())).text();
     expect(result).not.toContain("sk-secret");
+    expect(parseEvents(result).find(event => event.type === "error").diagnostics).toEqual({ reason: "http", status: 400 });
     expect(parseEvents(result).some(event => event.type === "error" && event.code === "ai_provider_request_rejected")).toBe(true);
   });
   test("concurrent memory change prevents final outdated output", async () => {
@@ -600,6 +601,8 @@ describe("actual AI SDK companion runtime", () => {
     expect(COMPANION_INSTRUCTIONS).toContain("Do not narrate");
     expect(COMPANION_INSTRUCTIONS).toContain("AI instructions");
     expect(COMPANION_INSTRUCTIONS).toContain("cannot empty the trash");
+    expect(COMPANION_INSTRUCTIONS).toContain("You can delete empty notebooks with delete_notebook");
+    expect(COMPANION_INSTRUCTIONS).toContain("Ordinary notebook deletion is not emptying the trash");
     expect(COMPANION_INSTRUCTIONS).toContain("delete note templates");
   });
 

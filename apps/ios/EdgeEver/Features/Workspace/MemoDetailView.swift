@@ -20,13 +20,14 @@ struct MemoDetailView: View {
     @State private var imageExportDocumentPayload: MemoImageExportDocumentPayload?
     @State private var imageExportMessage: MemoImageExportMessage?
     @State private var imageExporting = false
+    @State private var imageExportRequestId: String?
     @State private var imageExportBuffer = MemoImageExportBuffer()
     @State private var imageShareOptionsOpen = false
     @State private var imageShareFormat = "png"
-    @State private var imageShareTheme = "slate"
-    @State private var imageShareFontStyle = "serif"
+    @State private var imageShareTheme = "mint"
+    @State private var imageShareFontStyle = "auto"
     @State private var imageShareFontSize = "lg"
-    @State private var imageShareCardWidth = "standard"
+    @State private var imageShareCardWidth = "wide"
     @State private var imageShareTitle = true
     @State private var imageShareNotebook = false
     @State private var imageShareTags = false
@@ -39,6 +40,7 @@ struct MemoDetailView: View {
     @State private var lastOutboxError: String?
     @State private var pinPulse = false
     @State private var searchOpen = false
+    @State private var titleCollapsed = false
     @State private var searchQuery = ""
     @State private var searchMatchCount = 0
     @State private var searchMatchIndex = 0
@@ -186,24 +188,24 @@ struct MemoDetailView: View {
                 Form {
                     Section(env.preferences.t("主题风格", en: "Theme", pl: "Motyw")) {
                         Picker(env.preferences.t("主题风格", en: "Theme", pl: "Motyw"), selection: $imageShareTheme) {
-                            Text(env.preferences.t("经典浅色", en: "Light", pl: "Jasny")).tag("slate")
+                            Text(env.preferences.t("纯白", en: "Pure White", pl: "Czysta biel")).tag("slate")
+                            Text(env.preferences.t("薄荷", en: "Mint", pl: "Mięta")).tag("mint")
                             Text(env.preferences.t("极光渐变", en: "Aurora", pl: "Zorza")).tag("aurora")
                             Text(env.preferences.t("暮色晚霞", en: "Sunset", pl: "Zachód słońca")).tag("sunset")
-                            Text(env.preferences.t("暗夜曜石", en: "Midnight", pl: "Północ")).tag("midnight")
-                            Text(env.preferences.t("薄荷", en: "Mint", pl: "Mięta")).tag("mint")
-                            Text(env.preferences.t("紫雾流光", en: "Lavender", pl: "Lawenda")).tag("lavender")
-                            Text(env.preferences.t("经典便签", en: "Notepad", pl: "Notatnik")).tag("notepad")
-                            Text(env.preferences.t("水墨宣纸", en: "Rice Paper", pl: "Papier ryżowy")).tag("xuan")
+                            Text(env.preferences.t("黑白编辑", en: "Black & White", pl: "Czerń i biel")).tag("editorial")
+                            Text(env.preferences.t("极客终端", en: "Terminal", pl: "Terminal")).tag("terminal")
+                            Text(env.preferences.t("书页", en: "Book Page", pl: "Strona książki")).tag("film")
                         }
                         .pickerStyle(.menu)
                     }
                     Section(env.preferences.t("字体风格", en: "Typography", pl: "Typografia")) {
                         Picker(env.preferences.t("字体风格", en: "Typography", pl: "Typografia"), selection: $imageShareFontStyle) {
+                            Text(env.preferences.t("跟随主题", en: "Follow Theme", pl: "Zgodnie z motywem")).tag("auto")
                             Text(env.preferences.t("文艺衬线", en: "Serif", pl: "Szeryfowa")).tag("serif")
                             Text(env.preferences.t("现代无衬线", en: "Sans", pl: "Bezszeryfowa")).tag("sans")
                             Text(env.preferences.t("极客等宽", en: "Mono", pl: "Monospace")).tag("mono")
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
                     Section(env.preferences.t("字号大小", en: "Font size", pl: "Rozmiar czcionki")) {
                         Picker(env.preferences.t("字号大小", en: "Font size", pl: "Rozmiar czcionki"), selection: $imageShareFontSize) {
@@ -394,7 +396,15 @@ struct MemoDetailView: View {
             }
             refreshSyncStatus()
             TipTapWarmPool.warmIfNeeded()
+            SharedTipTapRuntime.viewer.resetReaderScroll()
             openInitialShareImageIfReady()
+        }
+        .onDisappear {
+            if let requestId = imageExportRequestId {
+                imageExportBuffer.cancel(requestId: requestId)
+            }
+            imageExportRequestId = nil
+            imageExporting = false
         }
         .onChange(of: bodyReady) { _, _ in
             openInitialShareImageIfReady()
@@ -411,6 +421,8 @@ struct MemoDetailView: View {
         }
         .onChange(of: memoId) { _, _ in
             bodyReady = false
+            titleCollapsed = false
+            SharedTipTapRuntime.viewer.resetReaderScroll()
             searchQuery = ""
             searchMatchCount = 0
             searchMatchIndex = 0
@@ -438,7 +450,13 @@ struct MemoDetailView: View {
             .accessibilityLabel(env.preferences.t("返回列表", en: "Back to list", pl: "Wróć do listy"))
             .accessibilityIdentifier(DetailMemoChrome.back)
 
-            Spacer(minLength: 8)
+            if titleCollapsed && !searchOpen, let memo {
+                collapsedHeaderTitle(memo)
+                    .padding(.leading, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Spacer(minLength: 8)
+            }
 
             HStack(spacing: 2) {
                 Button {
@@ -523,6 +541,29 @@ struct MemoDetailView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityIdentifier(id)
+    }
+
+    @ViewBuilder
+    private func collapsedHeaderTitle(_ memo: MemoDetail) -> some View {
+        if memo.isDeleted || blocksRichTextEdit(memo) {
+            Text(localizedTitle(for: memo))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppTheme.title)
+                .lineLimit(1)
+        } else {
+            Button {
+                onEdit(memo.id, .title)
+            } label: {
+                Text(localizedTitle(for: memo))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppTheme.title)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(env.preferences.t("编辑笔记标题", en: "Edit note title", pl: "Edytuj tytuł notatki"))
+            .accessibilityHint(env.preferences.t("进入编辑并聚焦标题", en: "Opens editing with the title focused", pl: "Otwiera edycję z kursorem w tytule"))
+            .accessibilityIdentifier(DetailMemoChrome.title)
+        }
     }
 
     // MARK: - Banners
@@ -657,43 +698,45 @@ struct MemoDetailView: View {
     private func detailBody(_ memo: MemoDetail) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                detailTitleRow(memo)
-                .padding(.top, 8)
-                .edgeEverSuccessShine(trigger: pinPulse)
-
-                HStack(spacing: 8) {
-                    notebookAffiliationControl(memo)
+                if !titleCollapsed || searchOpen {
+                    detailTitleRow(memo)
+                        .padding(.top, 8)
+                        .edgeEverSuccessShine(trigger: pinPulse)
 
                     HStack(spacing: 8) {
-                        Image(systemName: "tag")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppTheme.secondary)
-                        Text(
-                            memo.tags.isEmpty
-                                ? env.preferences.t("添加标签，用逗号分隔", en: "Add tags, comma separated", pl: "Dodaj tagi, oddzielone przecinkami")
-                                : memo.tags.joined(separator: ", ")
-                        )
-                        .font(.system(size: 12))
-                        .foregroundStyle(memo.tags.isEmpty ? AppTheme.muted : AppTheme.secondary)
-                        .lineLimit(1)
-                        .textSelection(.enabled)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier(DetailMemoChrome.tags)
-                }
-                .frame(minHeight: 32)
-                .padding(.top, 6)
-                .accessibilityIdentifier(DetailMemoChrome.metaRow)
+                        notebookAffiliationControl(memo)
 
-                Text(
-                    "\(env.preferences.t("创建于", en: "Created", pl: "Utworzono")) \(MemoDetailDate.format(memo.createdAt, locale: env.preferences.resolvedLocale))"
-                    + " · "
-                    + "\(env.preferences.t("更新于", en: "Updated", pl: "Zaktualizowano")) \(MemoDetailDate.format(memo.updatedAt, locale: env.preferences.resolvedLocale))"
-                )
-                .font(.system(size: 12))
-                .foregroundStyle(AppTheme.muted)
-                .padding(.top, 4)
-                .textSelection(.enabled)
+                        HStack(spacing: 8) {
+                            Image(systemName: "tag")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(AppTheme.secondary)
+                            Text(
+                                memo.tags.isEmpty
+                                    ? env.preferences.t("添加标签，用逗号分隔", en: "Add tags, comma separated", pl: "Dodaj tagi, oddzielone przecinkami")
+                                    : memo.tags.joined(separator: ", ")
+                            )
+                            .font(.system(size: 12))
+                            .foregroundStyle(memo.tags.isEmpty ? AppTheme.muted : AppTheme.secondary)
+                            .lineLimit(1)
+                            .textSelection(.enabled)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(DetailMemoChrome.tags)
+                    }
+                    .frame(minHeight: 32)
+                    .padding(.top, 6)
+                    .accessibilityIdentifier(DetailMemoChrome.metaRow)
+
+                    Text(
+                        "\(env.preferences.t("创建于", en: "Created", pl: "Utworzono")) \(MemoDetailDate.format(memo.createdAt, locale: env.preferences.resolvedLocale))"
+                        + " · "
+                        + "\(env.preferences.t("更新于", en: "Updated", pl: "Zaktualizowano")) \(MemoDetailDate.format(memo.updatedAt, locale: env.preferences.resolvedLocale))"
+                    )
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppTheme.muted)
+                    .padding(.top, 4)
+                    .textSelection(.enabled)
+                }
 
                 if searchOpen {
                     HStack(spacing: 8) {
@@ -761,7 +804,7 @@ struct MemoDetailView: View {
                 Rectangle()
                     .fill(AppTheme.border)
                     .frame(height: 1)
-                    .padding(.top, 16)
+                    .padding(.top, titleCollapsed && !searchOpen ? 0 : 16)
                     .padding(.bottom, 8)
             }
             .padding(.horizontal, 16)
@@ -793,6 +836,9 @@ struct MemoDetailView: View {
                     onSearchResult: { count, index in
                         searchMatchCount = count
                         searchMatchIndex = index
+                    },
+                    onReaderScroll: { collapsed in
+                        titleCollapsed = collapsed
                     },
                     onImageExportEvent: { event in
                         handleImageExportEvent(event)
@@ -914,7 +960,9 @@ struct MemoDetailView: View {
                 : isVisualDiagram(memo)
                 ? env.preferences.t("图表标题", en: "Diagram title", pl: "Tytuł diagramu")
                 : env.preferences.t("编辑笔记标题", en: "Edit note title", pl: "Edytuj tytuł notatki"))
-            .accessibilityHint(isInfographic(memo)
+            .accessibilityHint(memo.contentMarkdown.contains("<!-- edgeever-poster-v1:")
+                ? env.preferences.t("海报请在 Web 或桌面端编辑", en: "Edit posters on Web or desktop", pl: "Plakaty edytuj w wersji webowej lub desktopowej")
+                : isInfographic(memo)
                 ? env.preferences.t("信息图请在 Web 或桌面端编辑", en: "Edit infographics on Web or desktop", pl: "Infografiki edytuj w wersji webowej lub desktopowej")
                 : isStructuredTable(memo)
                 ? env.preferences.t("多维表格请在 Web 或桌面端编辑", en: "Edit databases on Web or desktop", pl: "Bazy danych edytuj w wersji webowej lub desktopowej")
@@ -950,7 +998,7 @@ struct MemoDetailView: View {
     }
 
     private func blocksRichTextEdit(_ memo: MemoDetail) -> Bool {
-        isVisualDiagram(memo) || isStructuredTable(memo) || isInfographic(memo)
+        isVisualDiagram(memo) || isStructuredTable(memo) || isInfographic(memo) || memo.contentMarkdown.contains("<!-- edgeever-poster-v1:")
     }
 
     private func refreshSyncStatus() {
@@ -1149,10 +1197,10 @@ struct MemoDetailView: View {
     private func exportMemoImage(
         _ memo: MemoDetail,
         format: String,
-        theme: String = "slate",
-        fontStyle: String = "serif",
+        theme: String = "mint",
+        fontStyle: String = "auto",
         fontSize: String = "lg",
-        cardWidth: String = "standard",
+        cardWidth: String = "wide",
         showTitle: Bool = true,
         showNotebook: Bool = false,
         showTags: Bool = false,
@@ -1163,8 +1211,24 @@ struct MemoDetailView: View {
         guard !imageExporting, bodyReady else { return }
         let requestId = UUID().uuidString
         imageExportBuffer.start(requestId: requestId)
+        imageExportRequestId = requestId
         imageExportIntent = intent
         imageExporting = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
+            guard imageExportRequestId == requestId else { return }
+            imageExportBuffer.cancel(requestId: requestId)
+            imageExportRequestId = nil
+            imageExporting = false
+            imageExportMessage = MemoImageExportMessage(
+                title: env.preferences.t("导出失败", en: "Export failed", pl: "Eksport nie powiódł się"),
+                message: env.preferences.t(
+                    "生成图片超时。请调小导出字号，或尝试较短的笔记。",
+                    en: "Image generation timed out. Try a smaller font size or a shorter note.",
+                    ja: "画像の生成がタイムアウトしました。文字を小さくするか、短いノートでお試しください。",
+                    pl: "Generowanie obrazu przekroczyło limit czasu. Spróbuj mniejszej czcionki lub krótszej notatki."
+                )
+            )
+        }
         let title = memo.title?.trimmingCharacters(in: .whitespacesAndNewlines)
         SharedTipTapRuntime.viewer.exportNoteImage(request: [
             "requestId": requestId,
@@ -1203,12 +1267,33 @@ struct MemoDetailView: View {
         case .none:
             break
         case let .failure(message):
+            imageExportRequestId = nil
             imageExporting = false
+            let explanation: String
+            switch message {
+            case "NOTE_IMAGE_TOO_LONG":
+                explanation = env.preferences.t(
+                    "笔记太长，无法清晰地导出为单张图片。",
+                    en: "This note is too long to export clearly as one image.",
+                    ja: "ノートが長すぎるため、1枚の画像として鮮明に書き出せません。",
+                    pl: "Notatka jest zbyt długa, aby wyeksportować ją czytelnie jako jeden obraz."
+                )
+            case "NOTE_IMAGE_RENDER_FAILED":
+                explanation = env.preferences.t(
+                    "图片生成失败，请稍后重试。",
+                    en: "The image could not be generated. Please try again.",
+                    ja: "画像を生成できませんでした。もう一度お試しください。",
+                    pl: "Nie udało się wygenerować obrazu. Spróbuj ponownie."
+                )
+            default:
+                explanation = message
+            }
             imageExportMessage = MemoImageExportMessage(
                 title: env.preferences.t("导出失败", en: "Export failed", pl: "Eksport nie powiódł się"),
-                message: message
+                message: explanation
             )
         case let .complete(data, filename, metadata):
+            imageExportRequestId = nil
             imageExporting = false
             do {
                 let directory = FileManager.default.temporaryDirectory.appendingPathComponent("EdgeEverNoteExports", isDirectory: true)
@@ -1410,6 +1495,12 @@ private final class MemoImageExportBuffer {
     func start(requestId: String) {
         self.requestId = requestId
         chunks.removeAll(keepingCapacity: true)
+    }
+
+    func cancel(requestId: String) {
+        guard self.requestId == requestId else { return }
+        self.requestId = nil
+        chunks.removeAll(keepingCapacity: false)
     }
 
     func accept(_ event: [String: Any]) -> Result {

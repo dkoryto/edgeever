@@ -88,6 +88,7 @@ import {
   uploadResourcePart,
 } from "./resource-upload-service";
 import { registerPluginDistributionRoutes } from "./plugin-distribution-routes";
+import { registerPosterRenderRoutes } from "./poster-render-routes";
 import { registerSyncRoutes } from "./sync-routes";
 import { registerMemoRoutes } from "./memo-routes";
 import { registerScheduledTaskRoutes } from "./scheduled-task-routes";
@@ -123,6 +124,7 @@ import {
   registerUserRoutes,
 } from "./user-routes";
 import { registerNotebookRoutes } from "./notebook-routes";
+import { registerNotebookShareRoutes, registerPublicNotebookShareRoutes } from "./notebook-share-routes";
 import { registerMemoShareRoutes, registerPublicShareRoutes } from "./share-routes";
 import { registerPublicTableFormRoutes, registerTableFormRoutes } from "./table-form-routes";
 import {
@@ -248,6 +250,7 @@ app.get("/api/health", async (c) => {
 app.get("/api/openapi.json", (c) => c.json(apiProbe));
 
 registerPublicShareRoutes(app);
+registerPublicNotebookShareRoutes(app);
 registerPublicTableFormRoutes(app);
 
 registerAuthRoutes(app, {
@@ -331,10 +334,12 @@ registerSyncRoutes(app, {
   mapMemoDetail: (...args) => mapMemoDetail(...args),
 });
 registerTagRoutes(app);
+registerPosterRenderRoutes(app);
 registerPluginDistributionRoutes(app);
 registerScheduledTaskRoutes(app);
 registerWorkspaceExtensionRoutes(app, { isDemoMode: (...args) => isDemoMode(...args) });
 registerMemoShareRoutes(app);
+registerNotebookShareRoutes(app);
 registerTableFormRoutes(app);
 registerTemplateRoutes(app, {
   createMemoRecord: (...args) => createMemoRecord(...args),

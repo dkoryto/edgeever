@@ -4,10 +4,16 @@ on:
   pull_request:
     paths:
       - "apps/extension/**"
+      - "apps/web/src/components/ui/**"
+      - "apps/web/src/lib/utils.ts"
+      - "tsconfig.json"
+      - "bunfig.toml"
+      - "patches/**"
       - "package.json"
       - "bun.lock"
       - "scripts/publish-web-clipper.mjs"
       - "scripts/publish-web-clipper.test.mjs"
+      - "scripts/verify-extension-source.mjs"
       - ".github/workflows/extension-build.yml"
       - ".github/workflows/extension-store.yml"
   push:
@@ -15,10 +21,16 @@ on:
       - main
     paths:
       - "apps/extension/**"
+      - "apps/web/src/components/ui/**"
+      - "apps/web/src/lib/utils.ts"
+      - "tsconfig.json"
+      - "bunfig.toml"
+      - "patches/**"
       - "package.json"
       - "bun.lock"
       - "scripts/publish-web-clipper.mjs"
       - "scripts/publish-web-clipper.test.mjs"
+      - "scripts/verify-extension-source.mjs"
       - ".github/workflows/extension-build.yml"
       - ".github/workflows/extension-store.yml"
   workflow_dispatch:
@@ -31,13 +43,15 @@ jobs:
     if: github.repository == 'tianma-if/edgeever'
     name: Build Chromium and Firefox
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -56,3 +70,6 @@ jobs:
 
       - name: Lint Firefox extension
         run: bun run lint:extension:firefox
+
+      - name: Rebuild Firefox from the review source archive
+        run: bun scripts/verify-extension-source.mjs

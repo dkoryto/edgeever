@@ -16,11 +16,20 @@ Chrome, Edge, and Firefox Manifest V3 extension for saving the current webpage, 
 - On Zhihu, right-click the answer or article text and choose **Save Zhihu content to EdgeEver**. The title, author, full text, and photos go into one note. Comments are left out. Right-clicking a photo saves that image instead. An open answer or article can be saved immediately. On the home feed or a question page, the extension remembers the item under the pointer; if that listener is not running yet, right-click the same text once more.
 - On Reddit, right-click a post or its title link and choose **Save Reddit post to EdgeEver**. The selected post becomes one note with its title, author, community, post text, source link, linked page, and available images. Comments are left out. The extension reads the selected post through Reddit's JSON response when available and falls back to its visible content. If the pointer listener is unavailable on a feed, right-click the same post once more.
 - On a GitHub repository page or code tree, right-click the page background, the description, or the README text and choose **Save this repository to EdgeEver**. The note keeps the repository address, the About text, and the homepage, language, license, and topics when the page shows them. An empty About falls back to the README's first paragraph. Issue, discussion, and single-file pages are left unsaved. The toolbar action uses the same card on those repository pages. Right-clicking a link or an image keeps the existing selection and image commands, so this one stays on the top-level menu.
+- On a Hacker News post detail page, right-click the page and choose **Save Hacker News post to EdgeEver**, or click **Clip current page**. The note keeps the title, author, original time, points at capture, external link and main-post text when available, without comments. Ask HN, Show HN and link-only posts are supported. Selecting text before the toolbar action saves only that selection.
 - On a YouTube or Bilibili watch page, right-click the page or the player and choose **Save video note to EdgeEver**. The note keeps the source and timestamped captions. A cover is uploaded only when the page provided the image bytes. A summary is added when the token includes `ai:generate` and the workspace has a default model. The command runs only after that click. Lives, premieres, bangumi, and other pages are left unsaved.
 - When the page cannot hand over the image bytes, the extension asks once for access to that image's site. After that, later images from the same site save directly.
 - Create a searchable EdgeEver memo with the source URL and a `web-clip` tag.
 
+The development build also includes dedicated detail-page capture for Hacker News, V2EX and Xiaoyuzhou. It saves main-post text and links, topic supplements, or complete episode Show Notes, while keeping toolbar selection priority and reporting partially copied images. See [usage and verification status](../../docs/browser-clipper-platforms.md) ([简体中文](../../docs/browser-clipper-platforms.zh-CN.md)). Full cross-browser live-site acceptance and store publication are still pending.
+
 The extension does not use a central relay service. The page content is sent directly to the EdgeEver instance configured by the user.
+
+HN usage and verification limits are documented in [English](../../docs/browser-clipper-hacker-news.md) and [简体中文](../../docs/browser-clipper-hacker-news.zh-CN.md).
+
+## UI architecture
+
+Extension pages use React, shared shadcn/ui-style Button and Input components, and Tailwind CSS 4 with a neutral theme. The webpage feedback UI uses the official shadcn/ui Sonner component structure, adapted for an explicit extension theme, inside a Shadow DOM. Extension pages and notifications share theme tokens. The feedback entry only mounts the component and maps clipping states, and is bundled as a standalone classic script. Its stylesheet stays inside the shadow root; image readers and content extractors do not load React. Permission requests remain in click handlers.
 
 ## Localization
 
@@ -29,6 +38,14 @@ The extension uses the cross-browser `chrome.i18n` compatibility namespace. Engl
 User-visible strings live in `public/_locales/<locale>/messages.json`. Add or update every supported locale when changing interface copy. Chrome Web Store listing translations are maintained separately in the developer dashboard; ready-to-paste English and Simplified Chinese copy is available in `STORE_LISTING.md`.
 
 ## Development
+
+### Store delivery
+
+The official repository's **Submit Web Clipper** workflow runs asynchronously after a stable `vX.Y.Z` GitHub Release is published. It builds from that release tag, runs the extension tests, and packages Chromium and Firefox before contacting the stores. Store delivery does not block or withdraw the GitHub Release. The extension keeps its independent version in `apps/extension/package.json`; increase it when preparing an extension update, rather than for every application release.
+
+Each store is checked separately. A version already published (or superseded by a newer public version) is skipped, and the same version awaiting review is treated as already submitted. If another version is awaiting review, the workflow summary reports `waiting-review` without submitting a replacement. This is not an automatic retry: after review completes, manually run **Submit Web Clipper**, enter the original `release_tag`, and select the affected platform. Credential or submission failures remain visible as workflow failures, while the other store is still attempted. Store approval is separate from successful submission.
+
+Manual runs retain platform selection and `dry_run`. Leave `release_tag` empty to build the selected workflow ref. Firefox notes default to a one-line extension version note; custom notes should describe only extension changes.
 
 ### Chromium
 

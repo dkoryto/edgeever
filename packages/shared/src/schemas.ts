@@ -421,9 +421,12 @@ export const AiPromptTemplateUpdateSchema = z.object({
   message: "At least one field is required.",
 });
 
-export const MemoShareUpdateSchema = z.object({
+export const SharePasswordUpdateSchema = z.object({
   passwordProtected: z.boolean(),
 });
+
+export const MemoShareUpdateSchema = SharePasswordUpdateSchema;
+export const NotebookShareUpdateSchema = SharePasswordUpdateSchema;
 
 export const NoteBodyFontUpdateSchema = z.object({
   bodyFont: z.enum(["wenkai", "wenkai-screen", "zhuque", "source-han-serif", "neo-zhi-song", "source-han-sans", "source-serif"]).nullable(),
@@ -444,7 +447,8 @@ const noteProseCustomColorSetSchema = z.object({
 export const NoteProseUpdateSchema = z.object({
   fontSize: z.union([z.literal(14), z.literal(16), z.literal(18), z.literal(20)]).nullable().optional(),
   lineHeight: z.union([z.literal(1.5), z.literal(1.65), z.literal(2)]).nullable().optional(),
-  palette: z.enum(NOTE_PROSE_PALETTE_CHOICES).nullable().optional(),
+  palette: z.union([z.enum(NOTE_PROSE_PALETTE_CHOICES), z.literal("orange")])
+    .transform((value) => value === "orange" ? "clay" as const : value).nullable().optional(),
   customCss: z.string().refine((value) => new TextEncoder().encode(value).byteLength <= MAX_NOTE_PROSE_CSS_BYTES).nullable().optional(),
   customColors: z.object({
     light: noteProseCustomColorSetSchema,

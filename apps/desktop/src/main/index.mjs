@@ -1833,6 +1833,7 @@ const startApplication = async () => {
   const acpRuntime = registerAcpIpc(ipcMain, createAcpHostRuntime({
     adapterStore: join(app.getPath("userData"), "acp-adapters"),
     onDiagnostic: (details) => { void writeDiagnostic("acp.adapter-stderr", details); },
+    onProcessDiagnostic: ({ event, ...details }) => { void writeDiagnostic(`acp.adapter-${event}`, details); },
     mcpScriptPath: app.isPackaged
       ? join(process.resourcesPath, "mcp-bridge", "edgeever-mcp-stdio.mjs")
       : join(projectRoot, "scripts", "edgeever-mcp-stdio.mjs"),

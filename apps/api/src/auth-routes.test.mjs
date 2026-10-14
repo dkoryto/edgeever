@@ -7,6 +7,7 @@ import { registerAuthRoutes } from "./auth-routes.ts";
 import { authenticateRequest } from "./auth-service.ts";
 import { sha256 } from "./hash-utils.ts";
 import { createSelfHostedStorageAdapter } from "./self-hosted-storage-adapter.ts";
+import { ensureUserWorkspace } from "./workspace-provisioning.ts";
 
 const interactiveAuth = {
   kind: "user",
@@ -196,5 +197,42 @@ describe("auth route contracts", () => {
     } finally {
       sqlite.close();
     }
+  });
+});
+
+describe("first sign-in seed localization", () => {
+  const signIn = async ({ demo = false, body = {}, headers = {} } = {}) => {
+    const sqlite = new Database(":memory:");
+    for (const file of globSync("migrations/*.sql").sort()) sqlite.exec(readFileSync(file, "utf8"));
+    sqlite.exec("INSERT INTO users (id, username, password_hash, display_name) VALUES ('usr_owner', 'admin', 'unused', 'admin')");
+    const app = createApp({
+      ensureUserWorkspace: (...args) => ensureUserWorkspace(...args),
+      isDemoEnvironment: () => demo,
+      verifyLogin: async () => ({ id: "usr_owner", username: "admin", display_name: "admin", is_disabled: 0 }),
+    });
+    const response = await app.request("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify({ username: "admin", password: "secret", ...body }),
+    }, { storage: createSelfHostedStorageAdapter(sqlite, "/tmp/edgeever-auth-routes-unused") });
+    const inbox = sqlite.query("SELECT name FROM notebooks WHERE workspace_id = 'ws_default' AND slug = 'inbox'").get();
+    const pending = sqlite.query("SELECT COUNT(*) AS count FROM workspace_seed_localizations").get();
+    sqlite.close();
+    return { status: response.status, inbox: inbox.name, pending: pending.count };
+  };
+
+  test("prefers the client's resolved UI locale over Accept-Language", async () => {
+    expect(await signIn({ body: { locale: "pl" }, headers: { "Accept-Language": "ja-JP,ja;q=0.9" } }))
+      .toEqual({ status: 200, inbox: "Skrzynka", pending: 0 });
+  });
+
+  test("falls back to Accept-Language for clients that do not send a locale", async () => {
+    expect(await signIn({ headers: { "Accept-Language": "ja-JP,ja;q=0.9" } }))
+      .toEqual({ status: 200, inbox: "受信トレイ", pending: 0 });
+  });
+
+  test("keeps the demo's own seed in the visitor's language", async () => {
+    expect(await signIn({ demo: true, body: { locale: "en-US" } }))
+      .toEqual({ status: 200, inbox: "等待分类", pending: 0 });
   });
 });

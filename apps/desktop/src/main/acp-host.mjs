@@ -757,6 +757,13 @@ export function createAcpHostRuntime(options = {}) {
     try {
       if (signal?.aborted) throw Object.assign(new Error("connection_timeout"), { code: "TIMEOUT" });
       child = await spawnAcpChild(spawnImpl, command, cwd);
+      // Correlate transient Windows consoles with adapter connections without
+      // logging command arguments, environment variables or credential paths.
+      const processDiagnostic = (event, details = {}) => {
+        try { options.onProcessDiagnostic?.({ event, requestId, pid: child.pid, ...details }); } catch { /* diagnostics are optional */ }
+      };
+      processDiagnostic("spawned");
+      child.once("exit", (code, signal) => processDiagnostic("exited", { code, signal }));
       if (signal?.aborted) throw Object.assign(new Error("connection_timeout"), { code: "TIMEOUT" });
       // Drain stderr even when no logger is configured. Bound each connection's
       // diagnostic output and sanitize before crossing into the log callback.

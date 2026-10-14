@@ -677,9 +677,11 @@ describe("ACP stdio session", () => {
       await chmod(wrapper, 0o755);
       const { spawn } = await import("node:child_process");
       const spawned = [];
+      const processDiagnostics = [];
       const runtime = createAcpHostRuntime({
         platform: "darwin",
         env: {},
+        onProcessDiagnostic: (event) => processDiagnostics.push(event),
         readProxy: () => "HTTPEnable : 1\nHTTPProxy : 127.0.0.1\nHTTPPort : 10808\nHTTPSEnable : 1\nHTTPSProxy : 127.0.0.1\nHTTPSPort : 10809\nSOCKSEnable : 1",
         spawnImpl(command, args, options) {
           spawned.push({ command, args, cwd: options.cwd, shell: options.shell, httpProxy: options.env?.HTTP_PROXY, httpsProxy: options.env?.HTTPS_PROXY });
@@ -704,6 +706,10 @@ describe("ACP stdio session", () => {
       expect(report.newSession.mcpServers).toEqual([]);
       const pid = Number(await readFile(`${reportPath}.pid`, "utf8"));
       await waitUntilExited(pid);
+      expect(processDiagnostics).toEqual([
+        { event: "spawned", requestId: "probe-antigravity", pid },
+        { event: "exited", requestId: "probe-antigravity", pid, code: null, signal: "SIGTERM" },
+      ]);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

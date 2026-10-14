@@ -173,6 +173,9 @@ export const LoginSchema = z.object({
   username: z.string().trim().min(1).max(80),
   password: z.string().min(1).max(512),
   deviceId: z.string().trim().min(16).max(160).optional(),
+  // The client's resolved UI locale. Used once, to localize a new workspace's
+  // default notebooks and notes at its first sign-in.
+  locale: z.string().trim().min(1).max(35).optional(),
 });
 
 export const LoginDeviceSessionUpdateSchema = z.object({

@@ -3,11 +3,19 @@ import {
   defaultAiPromptId,
 } from "@edgeever/shared/ai-prompt-seeds";
 import {
+  DEFAULT_NOTEBOOK_SEEDS,
+  WELCOME_MEMO_ID,
+  WELCOME_MEMO_SEED_CONTENT_HASH,
+  buildWelcomeMemoContent,
+  localizeDefaultNotebookName,
+} from "@edgeever/shared/default-workspace-seeds";
+import {
   DEFAULT_MEMO_TEMPLATE_SEEDS,
   defaultMemoTemplateId,
   localizeMemoTemplateSeed,
 } from "@edgeever/shared/memo-template-seeds";
 import { createId, isoNow } from "./entity-utils";
+import { sha256 } from "./hash-utils";
 import type {
   DatabaseAdapter,
   PreparedStatementAdapter,
@@ -39,13 +47,16 @@ export type DefaultNotebookRow = {
   sortOrder: number;
 };
 
-export const createDefaultNotebookRows = (workspaceId: string): DefaultNotebookRow[] => [
-  { id: workspaceInboxId(workspaceId), name: "等待分类", slug: "inbox", color: "#0f766e", sortOrder: 10 },
-  { id: `${workspaceId}_projects`, name: "工作项目", slug: "work-projects", color: "#2563eb", sortOrder: 20 },
-  { id: `${workspaceId}_learning`, name: "学习资料", slug: "learning-resources", color: "#7c3aed", sortOrder: 30 },
-  { id: `${workspaceId}_creative`, name: "灵感创作", slug: "creative-ideas", color: "#db2777", sortOrder: 40 },
-  { id: `${workspaceId}_personal`, name: "生活个人", slug: "personal-life", color: "#ea580c", sortOrder: 50 },
-];
+export const createDefaultNotebookRows = (
+  workspaceId: string,
+  locale?: string | null,
+): DefaultNotebookRow[] => DEFAULT_NOTEBOOK_SEEDS.map((seed) => ({
+  id: seed.key === "inbox" ? workspaceInboxId(workspaceId) : `${workspaceId}_${seed.key}`,
+  name: localizeDefaultNotebookName(seed, locale),
+  slug: seed.slug,
+  color: seed.color,
+  sortOrder: seed.sortOrder,
+}));
 
 // Template use and editing derive the TipTap document from content_markdown.
 // Keeping this initial value static avoids loading the Markdown parser merely
@@ -99,6 +110,146 @@ export const createWorkspaceDefaultSeedStatements = (
   )),
 ];
 
+// Workspaces created before their user has signed in (a fresh installation's
+// default workspace, or a member added by the owner) wait for that user's
+// first sign-in, when the UI locale is known.
+export const markWorkspaceSeedLocalizationPendingStatement = (
+  db: DatabaseAdapter,
+  workspaceId: string,
+  now = isoNow(),
+): PreparedStatementAdapter => db.prepare(
+  `INSERT OR IGNORE INTO workspace_seed_localizations (workspace_id, created_at) VALUES (?, ?)`,
+).bind(workspaceId, now);
+
+const SEED_LOCALIZATION_PENDING = `EXISTS (
+  SELECT 1 FROM workspace_seed_localizations WHERE workspace_id = ?
+)`;
+
+// Every update re-checks the pending row and the last statement removes it, so
+// the batch runs once even when two sign-ins race, and a failed batch leaves
+// the row in place for the next sign-in to retry. Only names and content that
+// still match a seeded value are replaced.
+export const createWorkspaceSeedLocalizationStatements = async (
+  db: DatabaseAdapter,
+  workspaceId: string,
+  locale: string | null | undefined,
+  now = isoNow(),
+): Promise<PreparedStatementAdapter[]> => {
+  const welcome = buildWelcomeMemoContent(locale);
+  const welcomeContentHash = await sha256(welcome.contentMarkdown + welcome.contentJson);
+  const welcomeIsUntouched = `${SEED_LOCALIZATION_PENDING}
+    AND EXISTS (
+      SELECT 1 FROM memos
+      WHERE id = ? AND workspace_id = ? AND is_deleted = 0
+    )
+    AND EXISTS (
+      SELECT 1 FROM memo_contents
+      WHERE memo_id = ? AND content_hash = ?
+    )`;
+  const welcomeGuardBindings = [
+    workspaceId,
+    WELCOME_MEMO_ID,
+    workspaceId,
+    WELCOME_MEMO_ID,
+    WELCOME_MEMO_SEED_CONTENT_HASH,
+  ];
+
+  return [
+    ...createWorkspaceDefaultSeedStatements(db, workspaceId, now, locale),
+    // Templates that already exist (the default workspace's come from the
+    // installation migrations) are replaced only while they still equal one
+    // of the seeded translations.
+    ...DEFAULT_MEMO_TEMPLATE_SEEDS.map((seed) => {
+      const seeded = Object.values(seed.translations);
+      const localized = localizeMemoTemplateSeed(seed, locale);
+      const placeholders = seeded.map(() => "?").join(", ");
+      return db.prepare(
+        `UPDATE memo_templates
+         SET name = ?, description = ?, title = ?, content_markdown = ?, updated_at = ?
+         WHERE id = ? AND workspace_id = ?
+           AND name IN (${placeholders})
+           AND title IN (${placeholders})
+           AND description IN (${placeholders})
+           AND content_markdown IN (${placeholders})
+           AND name <> ?
+           AND ${SEED_LOCALIZATION_PENDING}`,
+      ).bind(
+        localized.title,
+        localized.description,
+        localized.title,
+        localized.contentMarkdown,
+        now,
+        defaultMemoTemplateId(workspaceId, seed.key),
+        workspaceId,
+        ...seeded.map((translation) => translation.title),
+        ...seeded.map((translation) => translation.title),
+        ...seeded.map((translation) => translation.description),
+        ...seeded.map((translation) => translation.contentMarkdown),
+        localized.title,
+        workspaceId,
+      );
+    }),
+    ...DEFAULT_NOTEBOOK_SEEDS.map((seed) => {
+      const seededNames = Object.values(seed.names);
+      const name = localizeDefaultNotebookName(seed, locale);
+      return db.prepare(
+        `UPDATE notebooks
+         SET name = ?, updated_at = ?
+         WHERE workspace_id = ? AND slug = ? AND parent_id IS NULL AND is_deleted = 0
+           AND name IN (${seededNames.map(() => "?").join(", ")})
+           AND name <> ?
+           AND ${SEED_LOCALIZATION_PENDING}`,
+      ).bind(name, now, workspaceId, seed.slug, ...seededNames, name, workspaceId);
+    }),
+    // The memo row and the search document are updated before memo_contents,
+    // because their guard reads the seed content hash that the last update
+    // replaces.
+    db.prepare(
+      `UPDATE memos
+       SET title = ?, excerpt = ?, updated_at = ?
+       WHERE id = ? AND workspace_id = ? AND ${welcomeIsUntouched}`,
+    ).bind(welcome.title, welcome.excerpt, now, WELCOME_MEMO_ID, workspaceId, ...welcomeGuardBindings),
+    db.prepare(
+      `INSERT INTO memo_search_documents (memo_id, title, content_text, tags)
+       SELECT ?, ?, ?, 'edgeever welcome'
+       WHERE ${welcomeIsUntouched}
+       ON CONFLICT(memo_id) DO UPDATE SET
+         title = excluded.title,
+         content_text = excluded.content_text`,
+    ).bind(WELCOME_MEMO_ID, welcome.title, welcome.contentText, ...welcomeGuardBindings),
+    db.prepare(
+      `UPDATE memo_contents
+       SET content_json = ?, content_markdown = ?, content_text = ?, content_hash = ?,
+           revision = revision + 1, updated_at = ?
+       WHERE memo_id = ? AND ${welcomeIsUntouched}`,
+    ).bind(
+      welcome.contentJson,
+      welcome.contentMarkdown,
+      welcome.contentText,
+      welcomeContentHash,
+      now,
+      WELCOME_MEMO_ID,
+      ...welcomeGuardBindings,
+    ),
+    db.prepare(
+      `DELETE FROM workspace_seed_localizations WHERE workspace_id = ?`,
+    ).bind(workspaceId),
+  ];
+};
+
+const localizePendingWorkspaceSeeds = async (
+  db: DatabaseAdapter,
+  workspaceId: string,
+  locale: string | null | undefined,
+): Promise<boolean> => {
+  const pending = await db.prepare(
+    `SELECT workspace_id FROM workspace_seed_localizations WHERE workspace_id = ?`,
+  ).bind(workspaceId).first<{ workspace_id: string }>();
+  if (!pending) return false;
+  await db.batch(await createWorkspaceSeedLocalizationStatements(db, workspaceId, locale));
+  return true;
+};
+
 export const ensureUserWorkspace = async (
   db: DatabaseAdapter,
   userId: string,
@@ -109,6 +260,7 @@ export const ensureUserWorkspace = async (
     `SELECT workspace_id, role FROM workspace_members WHERE user_id = ? LIMIT 1`,
   ).bind(userId).first<{ workspace_id: string; role: "owner" | "member" }>();
   if (existing) {
+    await localizePendingWorkspaceSeeds(db, existing.workspace_id, locale);
     return { workspaceId: existing.workspace_id, role: existing.role };
   }
 
@@ -123,14 +275,16 @@ export const ensureUserWorkspace = async (
       `SELECT workspace_id, role FROM workspace_members WHERE user_id = ? LIMIT 1`,
     ).bind(userId).first<{ workspace_id: string; role: "owner" | "member" }>();
     if (claimed) {
-      await db.batch(createWorkspaceDefaultSeedStatements(db, claimed.workspace_id, isoNow(), locale));
+      if (!await localizePendingWorkspaceSeeds(db, claimed.workspace_id, locale)) {
+        await db.batch(createWorkspaceDefaultSeedStatements(db, claimed.workspace_id, isoNow(), locale));
+      }
       return { workspaceId: claimed.workspace_id, role: claimed.role };
     }
   }
 
   const workspaceId = createId("ws");
   const now = isoNow();
-  const notebooks = createDefaultNotebookRows(workspaceId);
+  const notebooks = createDefaultNotebookRows(workspaceId, locale);
   await db.batch([
     db.prepare(
       `INSERT INTO workspaces (id, name, is_personal, created_at, updated_at) VALUES (?, ?, 1, ?, ?)`,

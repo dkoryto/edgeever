@@ -388,6 +388,99 @@ describe("public table form uploads", () => {
     expect(env.storedFiles()).toEqual([]);
   });
 
+  test("stores a visitor's files in the note's workspace and lets the new row use them", async () => {
+    const env = installation();
+    const memoId = await env.createTable();
+    const { token } = await env.configure(memoId);
+    const formId = env.formRow(memoId).id;
+    const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+
+    const text = await env.upload(token, new File(["hello"], "notes.txt", { type: "text/plain" }));
+    const image = await env.upload(token, new File([png], "photo.png", { type: "image/png" }));
+
+    expect(text.status).toBe(201);
+    expect(text.body.resource).toMatchObject({ filename: "notes.txt", byteSize: 5 });
+    expect(text.body.resource.mimeType).toStartWith("text/plain");
+    expect(image.status).toBe(201);
+    expect(image.body.resource).toMatchObject({ filename: "photo.png", mimeType: "image/png", byteSize: png.byteLength });
+    for (const { body } of [text, image]) {
+      const row = env.sqlite.query("SELECT memo_id, object_key, metadata_json FROM resources WHERE id = ?").get(body.resource.id);
+      expect(row.memo_id).toBe(memoId);
+      expect(row.object_key.startsWith(`workspaces/${WORKSPACE_ID}/memos/${memoId}/`)).toBe(true);
+      expect(JSON.parse(row.metadata_json)).toMatchObject({ tableFormId: formId, pending: 1 });
+    }
+    expect(env.storedFiles()).toHaveLength(2);
+
+    const submitted = await env.submit(token, { fld_name: "Ann", fld_files: [text.body.resource.id, image.body.resource.id] });
+    expect(submitted.status).toBe(201);
+    expect((await env.document(memoId)).records.at(-1).cells.fld_files.map((file) => file.resourceId))
+      .toEqual([text.body.resource.id, image.body.resource.id]);
+    const pending = (id) => JSON.parse(env.sqlite.query("SELECT metadata_json FROM resources WHERE id = ?").get(id).metadata_json).pending;
+    expect(pending(text.body.resource.id)).toBe(0);
+    expect(pending(image.body.resource.id)).toBe(0);
+  });
+
+  test("refuses files for a form without an attachment field", async () => {
+    const env = installation();
+    const memoId = await env.createTable();
+    const { token } = await env.configure(memoId, formSettings({ fields: FORM_FIELDS.filter((field) => field.fieldId !== "fld_files") }));
+
+    const response = await env.upload(token, new File(["hello"], "notes.txt", { type: "text/plain" }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("table_form_invalid");
+    expect(env.sqlite.query("SELECT COUNT(*) AS count FROM resources").get().count).toBe(0);
+    expect(env.storedFiles()).toEqual([]);
+  });
+
+  test("limits the uploads a form holds before they are submitted", async () => {
+    const env = installation();
+    const memoId = await env.createTable();
+    const { token } = await env.configure(memoId);
+    const formId = env.formRow(memoId).id;
+    for (let index = 0; index < 50; index += 1) await env.pendingUpload(memoId, formId, { filename: `waiting-${index}.pdf` });
+    const filesBefore = env.storedFiles().length;
+
+    const response = await env.upload(token, new File(["hello"], "notes.txt", { type: "text/plain" }));
+
+    expect(response.status).toBe(429);
+    expect(response.body.error.code).toBe("table_form_rate_limited");
+    expect(env.storedFiles()).toHaveLength(filesBefore);
+  });
+
+  test("keeps the upload limit when uploads arrive at the same time", async () => {
+    const env = installation();
+    const memoId = await env.createTable();
+    const { token } = await env.configure(memoId);
+    const formId = env.formRow(memoId).id;
+    for (let index = 0; index < 45; index += 1) await env.pendingUpload(memoId, formId, { filename: `waiting-${index}.pdf` });
+
+    const responses = await Promise.all(Array.from({ length: 12 }, (_, index) => (
+      env.upload(token, new File([`file ${index}`], `burst-${index}.txt`, { type: "text/plain" }))
+    )));
+
+    expect(responses.every((response) => response.status === 201 || response.status === 429)).toBe(true);
+    const pending = env.sqlite.query(
+      `SELECT COUNT(*) AS count FROM resources
+       WHERE is_deleted = 0 AND json_extract(metadata_json, '$.pending') = 1`,
+    ).get().count;
+    expect(pending).toBeLessThanOrEqual(50);
+    expect(env.storedFiles()).toHaveLength(pending);
+  });
+
+  test("keeps a file pending when the submission sends it outside an attachment field", async () => {
+    const env = installation();
+    const memoId = await env.createTable();
+    const { token } = await env.configure(memoId);
+    const uploaded = await env.upload(token, new File(["hello"], "notes.txt", { type: "text/plain" }));
+    const id = uploaded.body.resource.id;
+
+    expect((await env.submit(token, { fld_name: "Ann", fld_private: [id], fld_files: [] })).status).toBe(201);
+
+    expect(JSON.parse(env.sqlite.query("SELECT metadata_json FROM resources WHERE id = ?").get(id).metadata_json).pending).toBe(1);
+    expect((await env.document(memoId)).records.at(-1).cells.fld_files).toEqual([]);
+  });
+
   test("retires pending uploads older than an hour and their stored files", async () => {
     const env = installation();
     const memoId = await env.createTable();

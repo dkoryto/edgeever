@@ -6,6 +6,7 @@ import {
   DEFAULT_NOTEBOOK_SEEDS,
   WELCOME_MEMO_ID,
   WELCOME_MEMO_SEED_CONTENT_HASH,
+  WELCOME_MEMO_SEED_TITLE,
   buildWelcomeMemoContent,
   localizeDefaultNotebookName,
 } from "@edgeever/shared/default-workspace-seeds";
@@ -63,18 +64,23 @@ export const createDefaultNotebookRows = (
 // to provision a workspace.
 const EMPTY_TEMPLATE_CONTENT_JSON = JSON.stringify({ type: "doc", content: [] });
 
+// A condition every seed insert must meet, so a delayed batch cannot recreate
+// a seed after the step that owned it has finished.
+type SeedInsertGuard = { sql: string; bindings: unknown[] };
+
 export const createWorkspaceDefaultSeedStatements = (
   db: DatabaseAdapter,
   workspaceId: string,
   now = isoNow(),
   locale?: string | null,
+  guard: SeedInsertGuard = { sql: "1", bindings: [] },
 ): PreparedStatementAdapter[] => [
   ...DEFAULT_MEMO_TEMPLATE_SEEDS.map((seed) => {
     const localized = localizeMemoTemplateSeed(seed, locale);
     return db.prepare(
       `INSERT OR IGNORE INTO memo_templates (
          id, workspace_id, name, description, title, content_json, content_markdown, tags_json, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard.sql}`,
     ).bind(
       defaultMemoTemplateId(workspaceId, seed.key),
       workspaceId,
@@ -86,6 +92,7 @@ export const createWorkspaceDefaultSeedStatements = (
       JSON.stringify(["template", seed.tag]),
       now,
       now,
+      ...guard.bindings,
     );
   }),
   ...DEFAULT_AI_PROMPT_SEEDS.map((seed) => db.prepare(
@@ -94,7 +101,7 @@ export const createWorkspaceDefaultSeedStatements = (
        name, description, instruction,
        name_customized, description_customized, instruction_customized,
        created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)`,
+     ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ? WHERE ${guard.sql}`,
   ).bind(
     defaultAiPromptId(workspaceId, seed.key),
     workspaceId,
@@ -107,6 +114,7 @@ export const createWorkspaceDefaultSeedStatements = (
     seed.instruction,
     now,
     now,
+    ...guard.bindings,
   )),
 ];
 
@@ -137,25 +145,38 @@ export const createWorkspaceSeedLocalizationStatements = async (
 ): Promise<PreparedStatementAdapter[]> => {
   const welcome = buildWelcomeMemoContent(locale);
   const welcomeContentHash = await sha256(welcome.contentMarkdown + welcome.contentJson);
-  const welcomeIsUntouched = `${SEED_LOCALIZATION_PENDING}
-    AND EXISTS (
-      SELECT 1 FROM memos
-      WHERE id = ? AND workspace_id = ? AND is_deleted = 0
-    )
-    AND EXISTS (
-      SELECT 1 FROM memo_contents
-      WHERE memo_id = ? AND content_hash = ?
-    )`;
-  const welcomeGuardBindings = [
-    workspaceId,
-    WELCOME_MEMO_ID,
-    workspaceId,
-    WELCOME_MEMO_ID,
-    WELCOME_MEMO_SEED_CONTENT_HASH,
-  ];
+  // The memo row must still carry the seeded title and the system actor, and
+  // the content must still be the seeded revision. The content is replaced
+  // before the memo row, so the memo row's guard looks for that replacement.
+  const welcomeGuard = (contentHash: string, revision: number) => ({
+    sql: `${SEED_LOCALIZATION_PENDING}
+      AND EXISTS (
+        SELECT 1 FROM memos
+        WHERE id = ? AND workspace_id = ? AND is_deleted = 0
+          AND title = ? AND updated_by = 'system'
+      )
+      AND EXISTS (
+        SELECT 1 FROM memo_contents
+        WHERE memo_id = ? AND content_hash = ? AND revision = ?
+      )`,
+    bindings: [
+      workspaceId,
+      WELCOME_MEMO_ID,
+      workspaceId,
+      WELCOME_MEMO_SEED_TITLE,
+      WELCOME_MEMO_ID,
+      contentHash,
+      revision,
+    ],
+  });
+  const welcomeIsUntouched = welcomeGuard(WELCOME_MEMO_SEED_CONTENT_HASH, 0);
+  const welcomeContentWasLocalized = welcomeGuard(welcomeContentHash, 1);
 
   return [
-    ...createWorkspaceDefaultSeedStatements(db, workspaceId, now, locale),
+    ...createWorkspaceDefaultSeedStatements(db, workspaceId, now, locale, {
+      sql: SEED_LOCALIZATION_PENDING,
+      bindings: [workspaceId],
+    }),
     // Templates that already exist (the default workspace's come from the
     // installation migrations) are replaced only while they still equal one
     // of the seeded translations.
@@ -201,27 +222,19 @@ export const createWorkspaceSeedLocalizationStatements = async (
            AND ${SEED_LOCALIZATION_PENDING}`,
       ).bind(name, now, workspaceId, seed.slug, ...seededNames, name, workspaceId);
     }),
-    // The memo row and the search document are updated before memo_contents,
-    // because their guard reads the seed content hash that the last update
-    // replaces.
-    db.prepare(
-      `UPDATE memos
-       SET title = ?, excerpt = ?, updated_at = ?
-       WHERE id = ? AND workspace_id = ? AND ${welcomeIsUntouched}`,
-    ).bind(welcome.title, welcome.excerpt, now, WELCOME_MEMO_ID, workspaceId, ...welcomeGuardBindings),
     db.prepare(
       `INSERT INTO memo_search_documents (memo_id, title, content_text, tags)
        SELECT ?, ?, ?, 'edgeever welcome'
-       WHERE ${welcomeIsUntouched}
+       WHERE ${welcomeIsUntouched.sql}
        ON CONFLICT(memo_id) DO UPDATE SET
          title = excluded.title,
          content_text = excluded.content_text`,
-    ).bind(WELCOME_MEMO_ID, welcome.title, welcome.contentText, ...welcomeGuardBindings),
+    ).bind(WELCOME_MEMO_ID, welcome.title, welcome.contentText, ...welcomeIsUntouched.bindings),
     db.prepare(
       `UPDATE memo_contents
        SET content_json = ?, content_markdown = ?, content_text = ?, content_hash = ?,
            revision = revision + 1, updated_at = ?
-       WHERE memo_id = ? AND ${welcomeIsUntouched}`,
+       WHERE memo_id = ? AND ${welcomeIsUntouched.sql}`,
     ).bind(
       welcome.contentJson,
       welcome.contentMarkdown,
@@ -229,8 +242,13 @@ export const createWorkspaceSeedLocalizationStatements = async (
       welcomeContentHash,
       now,
       WELCOME_MEMO_ID,
-      ...welcomeGuardBindings,
+      ...welcomeIsUntouched.bindings,
     ),
+    db.prepare(
+      `UPDATE memos
+       SET title = ?, excerpt = ?, updated_at = ?
+       WHERE id = ? AND workspace_id = ? AND ${welcomeContentWasLocalized.sql}`,
+    ).bind(welcome.title, welcome.excerpt, now, WELCOME_MEMO_ID, workspaceId, ...welcomeContentWasLocalized.bindings),
     db.prepare(
       `DELETE FROM workspace_seed_localizations WHERE workspace_id = ?`,
     ).bind(workspaceId),

@@ -56,10 +56,13 @@ export const localizeDefaultNotebookName = (
 export const WELCOME_MEMO_ID = "memo_welcome";
 
 /**
- * Content hash of the welcome note as the installation migrations leave it
- * (0001_initial.sql, repaired by 0014_repair_seed_memo_content_hash.sql). Any
- * edit changes it, so it identifies a welcome note nobody has touched.
+ * The welcome note as the installation migrations leave it (0001_initial.sql,
+ * repaired by 0014_repair_seed_memo_content_hash.sql): its title, the content
+ * hash, and revision 0 written by the `system` actor. Any edit, including a
+ * title-only one, changes the title, the revision, or the actor, so together
+ * they identify a welcome note nobody has touched.
  */
+export const WELCOME_MEMO_SEED_TITLE = "欢迎来到 EdgeEver";
 export const WELCOME_MEMO_SEED_CONTENT_HASH = "4edcf7092f86c561210d4eb788e96f28ec5c045f93952c82f5f57e1902f548bd";
 
 export type WelcomeMemoTranslation = {

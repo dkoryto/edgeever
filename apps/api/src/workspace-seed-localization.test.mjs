@@ -3,6 +3,7 @@ import { Database } from "bun:sqlite";
 import { globSync, readFileSync } from "node:fs";
 import { WELCOME_MEMO_SEED_CONTENT_HASH } from "@edgeever/shared/default-workspace-seeds";
 import { createSelfHostedStorageAdapter } from "./self-hosted-storage-adapter.ts";
+import { updateMemoRecord } from "./memo-service.ts";
 import {
   DEFAULT_WORKSPACE_ID,
   createDefaultNotebookRows,
@@ -177,6 +178,76 @@ describe("fresh installation", () => {
     expect(notebookNames(sqlite)).toMatchObject({ inbox: "Inbox", "work-projects": "My projects" });
     expect(welcome(sqlite)).toEqual(before);
     expect(templateNames(sqlite, DEFAULT_WORKSPACE_ID)).toEqual(expect.arrayContaining(["会议纪要", "Quick Spark"]));
+    expect(pendingWorkspaces(sqlite)).toEqual([]);
+  });
+
+  test("a delayed concurrent first sign-in does not restore seeds removed after the faster one finished", async () => {
+    const { sqlite, db } = freshInstallation();
+    addUser(sqlite, "usr_owner", "admin");
+    const batch = db.batch.bind(db);
+    let reachedBatch;
+    const delayedReachedBatch = new Promise((resolve) => { reachedBatch = resolve; });
+    let releaseBatch;
+    const delayedRelease = new Promise((resolve) => { releaseBatch = resolve; });
+    let delayed = true;
+    db.batch = async (statements) => {
+      if (delayed) {
+        delayed = false;
+        reachedBatch();
+        await delayedRelease;
+      }
+      return batch(statements);
+    };
+
+    // The slow sign-in has seen the pending row and holds its batch.
+    const slow = ensureUserWorkspace(db, "usr_owner", "admin", "ja");
+    await delayedReachedBatch;
+    await ensureUserWorkspace(db, "usr_owner", "admin", "en-US");
+    sqlite.exec(`
+      DELETE FROM memo_templates WHERE workspace_id = 'ws_default' AND name = 'Quick Spark';
+      DELETE FROM ai_prompt_templates WHERE workspace_id = 'ws_default';
+    `);
+    const afterFast = {
+      notebooks: notebookNames(sqlite),
+      note: welcome(sqlite),
+      templates: templateNames(sqlite, DEFAULT_WORKSPACE_ID),
+    };
+    releaseBatch();
+    await slow;
+
+    expect(afterFast.notebooks.inbox).toBe("Inbox");
+    expect(afterFast.templates).not.toContain("Quick Spark");
+    expect({
+      notebooks: notebookNames(sqlite),
+      note: welcome(sqlite),
+      templates: templateNames(sqlite, DEFAULT_WORKSPACE_ID),
+    }).toEqual(afterFast);
+    expect(sqlite.query("SELECT COUNT(*) AS count FROM ai_prompt_templates WHERE workspace_id = 'ws_default'").get())
+      .toEqual({ count: 0 });
+    expect(pendingWorkspaces(sqlite)).toEqual([]);
+  });
+
+  test("keeps a welcome note whose title alone was edited before the first sign-in localized it", async () => {
+    const { sqlite, db } = freshInstallation();
+    addUser(sqlite, "usr_owner", "admin");
+    const edited = await updateMemoRecord(
+      db,
+      DEFAULT_WORKSPACE_ID,
+      "memo_welcome",
+      { title: "My first note" },
+      { actorType: "user", actorId: "usr_owner" },
+      "admin",
+    );
+    expect(edited.error).toBeUndefined();
+    const before = welcome(sqlite);
+    expect(before.content_hash).toBe(WELCOME_MEMO_SEED_CONTENT_HASH);
+    expect(pendingWorkspaces(sqlite)).toEqual([DEFAULT_WORKSPACE_ID]);
+
+    await ensureUserWorkspace(db, "usr_owner", "admin", "en-US");
+
+    expect(welcome(sqlite)).toEqual(before);
+    expect(before.title).toBe("My first note");
+    expect(notebookNames(sqlite).inbox).toBe("Inbox");
     expect(pendingWorkspaces(sqlite)).toEqual([]);
   });
 

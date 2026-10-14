@@ -364,6 +364,23 @@ describe("JSON backup and restore", () => {
     expect(target.sqlite.query("SELECT COUNT(*) AS count FROM memos WHERE id = ?").get(plan.memo.id).count).toBe(0);
   });
 
+  test("writes nothing from a page in which any note has another note's revision", async () => {
+    const source = installation();
+    await populate(source);
+    const backup = await exportBackup(source);
+    const target = installation();
+    await target.postJson("/api/v1/restores/json/notebooks", { notebooks: backup.notebooks });
+    const valid = backup.memos.find(({ memo, revisions }) => revisions.length === 0 && memo.id !== "memo_welcome");
+    const plan = backup.memos.find(({ revisions }) => revisions.length > 0);
+
+    const response = await target.postJson("/api/v1/restores/json/memos", {
+      memos: [valid, { ...plan, revisions: [{ ...plan.revisions[0], memoId: valid.memo.id }] }],
+    });
+
+    expect(response.status).toBe(400);
+    expect(target.sqlite.query("SELECT COUNT(*) AS count FROM memos WHERE id IN (?, ?)").get(valid.memo.id, plan.memo.id).count).toBe(0);
+  });
+
   test("allows only signed-in users to restore", async () => {
     const source = installation();
     await populate(source);

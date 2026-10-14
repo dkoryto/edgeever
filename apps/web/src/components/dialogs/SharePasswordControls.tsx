@@ -2,6 +2,7 @@ import { Check, Copy, LoaderCircle, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME } from "./share-dialog-layout";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,7 +15,6 @@ export const SharePasswordControls = ({
   shareUrl,
   onChange,
   hideCopyBoth = false,
-  scopeHint,
 }: {
   passwordProtected: boolean;
   password: string;
@@ -22,7 +22,6 @@ export const SharePasswordControls = ({
   shareUrl: string;
   onChange: (enabled: boolean) => void;
   hideCopyBoth?: boolean;
-  scopeHint?: string;
 }) => {
   const { t } = useTranslation();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
@@ -65,7 +64,7 @@ export const SharePasswordControls = ({
                   <Button
                     variant={copyState === "copied" && copyTarget === "password" ? "solid" : "outline"}
                     size="icon"
-                    className="h-9 w-9 shrink-0"
+                    className={`h-9 w-9 shrink-0 ${copyState === "copied" && copyTarget === "password" ? SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME : ""}`}
                     disabled={!password}
                     aria-label={t("sharing.passwordCopy")}
                     onClick={() => void copyValue("password", password)}
@@ -92,9 +91,11 @@ export const SharePasswordControls = ({
               <TooltipContent>{t("sharing.regeneratePassword")}</TooltipContent>
             </Tooltip>
           </div>
-          <p className="text-xs leading-5 text-slate-500">
-            {scopeHint || t("sharing.notebookPasswordScopeHint")}
-          </p>
+          {!password ? (
+            <p className="text-xs leading-5 text-slate-500">
+              {t("sharing.passwordUnavailableHint")}
+            </p>
+          ) : null}
           {!hideCopyBoth && password ? (
             <Button
               variant="ghost"

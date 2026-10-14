@@ -15,12 +15,14 @@ import {
   nextShareUnlockFailure,
 } from "./share-access";
 import { allowPasswordProtectedShare, setShareAccessCookie } from "./share-http-access";
+import { encryptSharePassword, readSharePassword } from "./share-password-encryption";
 import { generateSharePassword } from "./share-password";
 
 const SHARE_TOKEN_BYTES = 32;
 const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 type MemoShareRow = {
+  password_encrypted?: string | null;
   memo_id: string;
   token: string;
   created_at: string;
@@ -98,7 +100,7 @@ const loadShareGate = async (c: AppContext, token: string) =>
      LIMIT 1`
   ).bind(token).first<ShareGateRow>();
 
-const selectMemoShareSql = `SELECT memo_id, token, created_at, updated_at, password_hash
+const selectMemoShareSql = `SELECT memo_id, token, created_at, updated_at, password_hash, password_encrypted
   FROM memo_shares WHERE memo_id = ? AND workspace_id = ?`;
 
 const NOTE_PROSE_COLUMNS = `note_prose_font_size, note_prose_line_height, note_prose_palette, note_prose_custom_css, note_prose_custom_colors`;
@@ -365,20 +367,22 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
     const denied = requireUser(c);
     if (denied) return denied;
 
+    c.header("Cache-Control", "private, no-store");
     const row = await c.env.storage.db.prepare(
-      `SELECT ms.memo_id, ms.token, ms.created_at, ms.updated_at, ms.password_hash
+      `SELECT ms.memo_id, ms.token, ms.created_at, ms.updated_at, ms.password_hash, ms.password_encrypted
        FROM memo_shares ms
        INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
        WHERE ms.memo_id = ? AND ms.workspace_id = ? AND m.is_deleted = 0
        LIMIT 1`
     ).bind(c.req.param("id"), getWorkspaceId(c)).first<MemoShareRow>();
-    return c.json({ share: row ? mapMemoShare(row) : null });
+    return c.json({ share: row ? mapMemoShare(row, row.password_hash ? await readSharePassword(row.password_encrypted, row.token, c.env, row.password_hash) : undefined) : null });
   });
 
   app.post("/api/v1/memos/:id/share", async (c) => {
     const denied = requireUser(c);
     if (denied) return denied;
 
+    c.header("Cache-Control", "private, no-store");
     const memoId = c.req.param("id");
     const workspaceId = getWorkspaceId(c);
     const memo = await c.env.storage.db.prepare(
@@ -388,7 +392,7 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
 
     const existing = await c.env.storage.db.prepare(selectMemoShareSql)
       .bind(memoId, workspaceId).first<MemoShareRow>();
-    if (existing) return c.json({ share: mapMemoShare(existing) });
+    if (existing) return c.json({ share: mapMemoShare(existing, existing.password_hash ? await readSharePassword(existing.password_encrypted, existing.token, c.env, existing.password_hash) : undefined) });
 
     const now = isoNow();
     const token = randomToken(SHARE_TOKEN_BYTES);
@@ -406,13 +410,14 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
     if (isNewShare) {
       await audit(c.env.storage.db, actor.actorType, actor.actorId, "memo.share_create", "memo", memoId, {});
     }
-    return c.json({ share: mapMemoShare(created) }, isNewShare ? 201 : 200);
+    return c.json({ share: mapMemoShare(created, created.password_hash ? await readSharePassword(created.password_encrypted, created.token, c.env, created.password_hash) : undefined) }, isNewShare ? 201 : 200);
   });
 
   app.patch("/api/v1/memos/:id/share", zValidator("json", MemoShareUpdateSchema), async (c) => {
     const denied = requireUser(c);
     if (denied) return denied;
 
+    c.header("Cache-Control", "private, no-store");
     const memoId = c.req.param("id");
     const workspaceId = getWorkspaceId(c);
     const existing = await c.env.storage.db.prepare(
@@ -427,7 +432,7 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
     if (!c.req.valid("json").passwordProtected) {
       await c.env.storage.db.prepare(
         `UPDATE memo_shares
-         SET password_hash = NULL, unlock_failed_count = 0, unlock_window_started_at = NULL,
+         SET password_hash = NULL, password_encrypted = NULL, unlock_failed_count = 0, unlock_window_started_at = NULL,
              unlock_blocked_until = NULL, updated_at = ?
          WHERE memo_id = ? AND workspace_id = ?`
       ).bind(now, memoId, workspaceId).run();
@@ -439,12 +444,13 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
 
     const password = generateSharePassword();
     const passwordHash = await hashPassword(password);
+    const encrypted = await encryptSharePassword(password, existing.token, c.env);
     await c.env.storage.db.prepare(
       `UPDATE memo_shares
-       SET password_hash = ?, unlock_failed_count = 0, unlock_window_started_at = NULL,
+       SET password_hash = ?, password_encrypted = ?, unlock_failed_count = 0, unlock_window_started_at = NULL,
            unlock_blocked_until = NULL, updated_at = ?
        WHERE memo_id = ? AND workspace_id = ?`
-    ).bind(passwordHash, now, memoId, workspaceId).run();
+    ).bind(passwordHash, encrypted, now, memoId, workspaceId).run();
     await audit(
       c.env.storage.db,
       actor.actorType,
@@ -463,12 +469,14 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
     const denied = requireUser(c);
     if (denied) return denied;
 
+    c.header("Cache-Control", "private, no-store");
     const memoId = c.req.param("id");
     const workspaceId = getWorkspaceId(c);
     const existing = await c.env.storage.db.prepare(
       `SELECT memo_id FROM memo_shares WHERE memo_id = ? AND workspace_id = ?`
     ).bind(memoId, workspaceId).first<{ memo_id: string }>();
-    if (!existing) return notFound(c, "Active share not found");
+    // A retry after successful revocation already has the requested state.
+    if (!existing) return c.json({ ok: true });
 
     await c.env.storage.db.prepare(
       `DELETE FROM memo_shares WHERE memo_id = ? AND workspace_id = ?`

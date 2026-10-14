@@ -67,7 +67,15 @@ export const NotebookTreeItem = ({
 }) => {
   const { t } = useTranslation();
   const [shareOpen, setShareOpen] = useState(false);
-  const publicNotebook = inheritedPublic || Boolean(sharedNotebookIds?.has(node.id));
+  const directlyShared = Boolean(sharedNotebookIds?.has(node.id));
+  const publicNotebook = inheritedPublic || directlyShared;
+  const shareActionLabel = t(
+    directlyShared
+      ? "sharing.manage"
+      : inheritedPublic
+        ? "sharing.notebookInheritedAction"
+        : "sharing.notebookTitle",
+  );
   const open = !collapsedNotebookIds.has(node.id);
   const hasChildren = node.children.length > 0;
   const showsSplitCount = !showDescendantNotes && hasChildren;
@@ -351,7 +359,7 @@ export const NotebookTreeItem = ({
                     type="button"
                     onClick={event => { event.stopPropagation(); setActionsOpen(false); setShareOpen(true); }}
                   >
-                    <Share2 className="h-4 w-4" />{t("sharing.notebookTitle")}
+                    <Share2 className="h-4 w-4" />{shareActionLabel}
                   </button>
                 {isInbox ? (
                   <>
@@ -416,7 +424,7 @@ export const NotebookTreeItem = ({
             {t("notebookTree.rename")}
           </ContextMenuItem>
           <ContextMenuItem className="flex h-9 items-center gap-2 px-3 text-xs cursor-pointer" onClick={() => setShareOpen(true)}>
-            <Share2 className="h-4 w-4" />{t("sharing.notebookTitle")}
+            <Share2 className="h-4 w-4" />{shareActionLabel}
           </ContextMenuItem>
           {isInbox ? (
             <>

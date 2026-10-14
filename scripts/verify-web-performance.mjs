@@ -52,9 +52,9 @@ const allowedLargeChunkPattern = /^(?:vendor-(?:code-highlight|beautiful-mermaid
 // while retaining the initial preload budget and the checks below.
 const boundedDeferredChunks = [
   { pattern: /^vendor~mathlive-loader-.*\.js$/, maxBytes: 850 * 1024 },
-  // Storage usage and companion failure diagnostics bring the deferred catalog
-  // to ~542 KiB. Keep a bounded allowance without changing the preload budget.
-  { pattern: /^i18n-ja-.*\.js$/, maxBytes: 545 * 1024 },
+  // Notebook publishing and share management bring the deferred catalog to
+  // ~551 KiB. Keep a bounded allowance without changing the preload budget.
+  { pattern: /^i18n-ja-.*\.js$/, maxBytes: 560 * 1024 },
 ];
 const allowedLargeChunk = ({ name, size }) =>
   allowedLargeChunkPattern.test(name) ||

@@ -12,42 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SharePasswordControls } from "./SharePasswordControls";
+import { SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME, SHARE_DIALOG_WIDTH_CLASS_NAME } from "./share-dialog-layout";
 import { Input } from "@/components/ui/input";
 import { api, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
 export const getPublicNotebookShareUrl = (token: string) =>
   `${(getConfiguredDesktopApiBaseUrl() || window.location.origin).replace(/\/$/, "")}/share/notebook/${encodeURIComponent(token)}`;
-
-const notebookSharePasswordStorageKey = (notebookId: string) => `edgeever.notebookSharePassword.${notebookId}`;
-
-const readStoredNotebookSharePassword = (notebookId: string, token: string) => {
-  try {
-    const raw = window.localStorage.getItem(notebookSharePasswordStorageKey(notebookId)) || window.sessionStorage.getItem(notebookSharePasswordStorageKey(notebookId));
-    if (!raw) return "";
-    const parsed = JSON.parse(raw) as { token?: string; password?: string };
-    return parsed.token === token && typeof parsed.password === "string" ? parsed.password : "";
-  } catch {
-    return "";
-  }
-};
-
-const writeStoredNotebookSharePassword = (notebookId: string, token: string, password: string) => {
-  try {
-    window.localStorage.setItem(notebookSharePasswordStorageKey(notebookId), JSON.stringify({ token, password }));
-  } catch {
-    // Storage may be unavailable; the generated password is still shown in this dialog session.
-  }
-};
-
-const clearStoredNotebookSharePassword = (notebookId: string) => {
-  try {
-    window.localStorage.removeItem(notebookSharePasswordStorageKey(notebookId));
-    window.sessionStorage.removeItem(notebookSharePasswordStorageKey(notebookId));
-  } catch {
-    // Ignore restricted storage contexts.
-  }
-};
 
 export const ShareNotebookDialog = ({
   notebookId,
@@ -66,8 +37,8 @@ export const ShareNotebookDialog = ({
   const location = useLocation();
   const queryClient = useQueryClient();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [revealedPassword, setRevealedPassword] = useState("");
   const copyResetTimerRef = useRef<number | null>(null);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const queryKey = [
     "notebook-share",
@@ -80,6 +51,7 @@ export const ShareNotebookDialog = ({
     queryFn: () => api.getNotebookShare(notebookId),
     enabled: open,
     retry: false,
+    gcTime: 0,
     refetchOnMount: "always",
   });
 
@@ -97,23 +69,15 @@ export const ShareNotebookDialog = ({
   const passwordMutation = useMutation({
     mutationFn: (passwordProtected: boolean) => api.updateNotebookShare(notebookId, { passwordProtected }),
     onSuccess: (data) => {
-      queryClient.setQueryData(queryKey, { share: { ...data.share, password: undefined } });
+      queryClient.setQueryData(queryKey, data);
       void invalidate();
-      if (data.share.password) {
-        writeStoredNotebookSharePassword(notebookId, data.share.token, data.share.password);
-        setRevealedPassword(data.share.password);
-      } else {
-        clearStoredNotebookSharePassword(notebookId);
-        setRevealedPassword("");
-      }
+
     },
   });
 
   const revoke = useMutation({
     mutationFn: () => api.revokeNotebookShare(notebookId),
     onSuccess: () => {
-      clearStoredNotebookSharePassword(notebookId);
-      setRevealedPassword("");
       queryClient.setQueryData(queryKey, { share: null });
       setCopyState("idle");
       void invalidate();
@@ -125,7 +89,6 @@ export const ShareNotebookDialog = ({
     passwordMutation.reset();
     revoke.reset();
     setCopyState("idle");
-    setRevealedPassword("");
   }, [notebookId]);
 
   useEffect(() => () => {
@@ -134,13 +97,7 @@ export const ShareNotebookDialog = ({
 
   const share = query.data?.share ?? null;
 
-  useEffect(() => {
-    if (!share?.passwordProtected) {
-      setRevealedPassword("");
-      return;
-    }
-    setRevealedPassword(readStoredNotebookSharePassword(notebookId, share.token));
-  }, [notebookId, share?.passwordProtected, share?.token]);
+  const revealedPassword = share?.passwordProtected ? share.password ?? "" : "";
 
   const shareUrl = share ? getPublicNotebookShareUrl(share.token) : "";
   const busy = query.isFetching || create.isPending || revoke.isPending || passwordMutation.isPending;
@@ -162,26 +119,23 @@ export const ShareNotebookDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md space-y-4">
+      <DialogContent
+        ref={dialogContentRef}
+        className={`${SHARE_DIALOG_WIDTH_CLASS_NAME} space-y-4`}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          dialogContentRef.current?.focus({ preventScroll: true });
+        }}
+      >
         <DialogHeader className="space-y-1.5 text-left">
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <Share2 className="h-5 w-5 text-slate-700" />
-            {t("sharing.notebookTitle")}
+            {t(share ? "sharing.manage" : inherited ? "sharing.notebookInheritedAction" : "sharing.notebookTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs leading-5 text-slate-500">
             <span className="font-medium text-slate-800">{notebookName}</span>
-            <span className="mx-1 text-slate-400">·</span>
-            <span>
-              {t(share?.passwordProtected ? "sharing.notebookProtectedScopeHint" : "sharing.notebookScopeHint")}
-            </span>
           </DialogDescription>
         </DialogHeader>
-
-        {inherited ? (
-          <p className="text-xs text-amber-700">
-            {t("sharing.notebookInheritedHint")}
-          </p>
-        ) : null}
 
         {query.isPending ? (
           <div className="flex min-h-20 items-center justify-center text-slate-500" role="status">
@@ -189,7 +143,13 @@ export const ShareNotebookDialog = ({
           </div>
         ) : share ? (
           <div className="space-y-3.5">
-            <div className="flex gap-2">
+            <p className="text-xs leading-5 text-slate-600">
+              {t(share.passwordProtected ? "sharing.notebookProtectedScopeHint" : "sharing.notebookScopeHint")}
+            </p>
+            {inherited ? (
+              <p className="text-xs leading-5 text-slate-600">{t("sharing.notebookInheritedHint")}</p>
+            ) : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 value={shareUrl}
                 readOnly
@@ -198,7 +158,7 @@ export const ShareNotebookDialog = ({
               />
               <Button
                 variant={copyState === "copied" ? "solid" : copyState === "error" ? "danger" : "outline"}
-                className="min-w-28 shrink-0"
+                className={`min-w-28 shrink-0 self-end sm:self-auto ${copyState === "copied" ? SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME : ""}`}
                 aria-live="polite"
                 onClick={() => void handlePrimaryCopy()}
               >
@@ -247,10 +207,10 @@ export const ShareNotebookDialog = ({
           </div>
         ) : !query.isError ? (
           <div className="space-y-3">
-            <p className="text-xs leading-6 text-slate-600">{t("sharing.notebookScopeHint")}</p>
-            <Button className="w-full" variant="solid" disabled={busy} onClick={() => create.mutate()}>
+            <p className="text-xs leading-6 text-slate-600">{t(inherited ? "sharing.notebookInheritedOnlyHint" : "sharing.notebookScopeHint")}</p>
+            <Button className={`w-full ${SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME}`} variant="solid" disabled={busy} onClick={() => create.mutate()}>
               {create.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-              {t("sharing.create")}
+              {t(inherited ? "sharing.notebookCreateIndependent" : "sharing.create")}
             </Button>
           </div>
         ) : null}
@@ -274,6 +234,7 @@ export const ShareNotebookDialog = ({
           <div className="pt-1 text-center">
             <Link
               to="/settings?tab=sharing"
+              onClick={() => onOpenChange(false)}
               className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
             >
               {t("sharing.viewAll")}

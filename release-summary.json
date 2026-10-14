@@ -1,20 +1,23 @@
 {
-  "version": "1.115.0",
+  "version": "1.118.0",
   "changes": {
     "en-US": [
-      "Show instance-wide and per-account attachment storage usage in member management, with clearer usage labels. (#553)",
-      "Improve inline code styling and the visibility of editor regions, including formatting copied to WeChat.",
-      "Show safe diagnostics for failed AI companion requests to help identify connection and provider errors. (#555)"
+      "Publish notebooks and their descendants as a browsable website with live content, directory navigation, and optional password protection.",
+      "Manage note and notebook shares more clearly, retry revocation, and view newly generated share passwords across devices. Regenerate older share passwords once to enable cross-device viewing; their existing access remains valid.",
+      "Preserve failed desktop share imports across restarts, restore WorkBuddy sign-in after connection failures, and clarify the current note context for local AI agents.",
+      "Use softer button colors and clearer inbox deletion guidance."
     ],
     "zh-CN": [
-      "在成员管理中展示实例及各账号的附件存储占用，并明确已用空间标签。（#553）",
-      "优化行内代码样式和编辑区域辨识度，并改善复制到微信的格式。",
-      "AI 助手请求失败时显示安全的诊断信息，便于定位连接和服务商错误。（#555）"
+      "支持将笔记本及全部子笔记本发布为公开网站，提供目录导航、内容同步和可选密码保护。",
+      "优化笔记与笔记本的分享管理、状态提示和撤销重试，并支持跨设备查看新生成的分享密码。旧分享密码仍可访问，需重新生成一次才能跨设备查看。",
+      "桌面端导入失败的分享内容可在重启后保留，修复 WorkBuddy 连接失败后的登录入口，并明确本地 AI 工具的当前笔记上下文。",
+      "优化按钮配色与收件箱删除提示。"
     ],
     "ja": [
-      "メンバー管理でインスタンス全体とアカウント別の添付ファイル使用量を表示し、使用済み容量の表記を明確にしました。",
-      "インラインコードと編集領域の視認性を改善し、WeChatへのコピー書式を調整しました。",
-      "AIアシスタントのリクエスト失敗時に安全な診断情報を表示し、接続やプロバイダーの問題を調べやすくしました。"
+      "ノートブックと配下の内容を、目次・更新反映・任意のパスワード保護付きの公開サイトとして共有できます。",
+      "共有管理・状態表示・取り消しの再試行を改善し、新しく生成した共有パスワードを端末間で確認できます。既存のパスワードは引き続き利用でき、再生成すると端末間で確認できます。",
+      "デスクトップで失敗した共有インポートを再起動後も保持し、接続失敗後の WorkBuddy ログインとローカル AI の現在のノートの認識を改善しました。",
+      "ボタンの配色と受信箱の削除案内を改善しました。"
     ]
   }
 }

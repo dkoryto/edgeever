@@ -7,6 +7,7 @@ import {
   registerNotebookShareRoutes,
   registerPublicNotebookShareRoutes,
 } from "./notebook-share-routes";
+import { hashPassword } from "./auth-crypto";
 import { registerPublicShareRoutes } from "./share-routes";
 
 const databases = [];
@@ -22,7 +23,7 @@ const auth = {
   scopes: [],
   username: "test",
 };
-const fixture = () => {
+const fixture = (legacyHash) => {
   const db = new Database(":memory:");
   databases.push(db);
   // Populate a real pre-feature schema first, then upgrade it in place.
@@ -75,7 +76,10 @@ const fixture = () => {
     [token],
   );
   db.exec(readFileSync("migrations/0068_notebook_share_passwords.sql", "utf8"));
+  if (legacyHash) db.run("UPDATE notebook_shares SET password_hash = ?", [legacyHash]);
+  db.exec(readFileSync("migrations/0069_share_password_encryption.sql", "utf8"));
   const environment = {
+    EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY: "test-share-master-key",
     storage: createSelfHostedStorageAdapter(
       db,
       "/tmp/edgeever-notebook-share-unused",
@@ -497,4 +501,92 @@ test("workspace login cannot bypass the notebook password; an unlock grant is st
   for (const path of ["", "/memos/memo_child", "/resources/res_memo_child/blob"]) {
     expect((await f.request(path, { headers: { Cookie: `edgeever_session=owner; ${cookie}` } })).status).toBe(200);
   }
+});
+
+describe("notebook share password recovery", () => {
+  const ownerPath = "/api/v1/notebooks/root/share";
+  const change = (f, protectedValue = true) => f.app.request(ownerPath, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passwordProtected: protectedValue }),
+  }, f.environment);
+
+  test("upgrades a hash-only share in place without invalidating the old password", async () => {
+    const f = fixture(await hashPassword("legacy12"));
+    const owner = await f.app.request(ownerPath, {}, f.environment);
+    expect((await owner.json()).share.password).toBeUndefined();
+    expect(f.db.query("SELECT password_encrypted FROM notebook_shares").get().password_encrypted).toBeNull();
+    const unlock = await f.request("/unlock", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "legacy12" }),
+    });
+    expect(unlock.status).toBe(200);
+    const cookie = unlock.headers.get("set-cookie").split(";")[0];
+    expect((await f.request("", { headers: { Cookie: cookie } })).status).toBe(200);
+    const next = (await (await change(f)).json()).share;
+    expect(next.token).toBe(token);
+    expect((await (await f.app.request(ownerPath, {}, f.environment)).json()).share.password).toBe(next.password);
+    expect((await f.request("", { headers: { Cookie: cookie } })).status).toBe(403);
+  });
+
+  test("recovers on a fresh read, hides from other workspaces/agents, and clears ciphertext", async () => {
+    const f = fixture();
+    const share = (await (await change(f)).json()).share;
+    const ciphertext = f.db.query("SELECT password_encrypted FROM notebook_shares").get().password_encrypted;
+    expect(ciphertext).toStartWith("v1.");
+    expect(ciphertext).not.toContain(share.password);
+    const fresh = await f.app.request(ownerPath, {}, f.environment);
+    expect(fresh.headers.get("cache-control")).toBe("private, no-store");
+    expect((await fresh.json()).share.password).toBe(share.password);
+    for (const authKind of ["none", "agent"]) {
+      expect((await f.app.request(ownerPath, { headers: { "test-auth": authKind } }, f.environment)).status).toBe(403);
+    }
+    expect((await (await f.app.request("/api/v1/notebooks/foreign/share", {}, f.environment)).json()).share).toBeNull();
+    // Lost key prevents recovery, but hash-based access is still usable.
+    const previous = f.environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY;
+    f.environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY = "different-key";
+    expect((await (await f.app.request(ownerPath, {}, f.environment)).json()).share.password).toBeUndefined();
+    expect((await f.request("/unlock", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: share.password }),
+    })).status).toBe(200);
+    f.environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY_PREVIOUS = previous;
+    expect((await (await f.app.request(ownerPath, {}, f.environment)).json()).share.password).toBe(share.password);
+    await change(f, false);
+    expect(f.db.query("SELECT password_encrypted FROM notebook_shares").get().password_encrypted).toBeNull();
+    expect((await (await f.app.request(ownerPath, {}, f.environment)).json()).share.password).toBeUndefined();
+  });
+});
+
+ test("an older server rotating only the hash cannot display stale ciphertext", async () => {
+    const f = fixture();
+    const response = await f.app.request("/api/v1/notebooks/root/share", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordProtected: true }),
+    }, f.environment);
+    expect(response.status).toBe(200);
+    // Simulate a rollback: the previous server writes only the hash.
+    f.db.run("UPDATE notebook_shares SET password_hash = ?", [await hashPassword("old-server12")]);
+    const read = await f.app.request("/api/v1/notebooks/root/share", {}, f.environment);
+    expect((await read.json()).share.password).toBeUndefined();
+    const unlock = await f.request("/unlock", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "old-server12" }),
+    });
+    expect(unlock.status).toBe(200);
+  });
+
+test("missing deployment keys reject regeneration without changing the existing password", async () => {
+  const f = fixture(await hashPassword("existing12"));
+  delete f.environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY;
+  f.app.onError((error, c) => c.json({ error: { code: error.code } }, error.status ?? 500));
+  const before = f.db.query("SELECT password_hash, password_encrypted FROM notebook_shares").get();
+  const response = await f.app.request("/api/v1/notebooks/root/share", {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passwordProtected: true }),
+  }, f.environment);
+  expect(response.status).toBe(503);
+  expect((await response.json()).error.code).toBe("share_encryption_unavailable");
+  expect(f.db.query("SELECT password_hash, password_encrypted FROM notebook_shares").get()).toEqual(before);
+  expect((await f.request("/unlock", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: "existing12" }),
+  })).status).toBe(200);
 });

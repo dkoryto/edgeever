@@ -85,7 +85,7 @@ const createDatabaseEnvironment = () => {
 
   return {
     sqlite,
-    environment: { storage: { db: new SqliteD1Database(sqlite), resources: {} } },
+    environment: { EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY: "test-share-master-key", storage: { db: new SqliteD1Database(sqlite), resources: {} } },
   };
 };
 
@@ -336,6 +336,25 @@ const readCookieValue = (response, name) => {
 };
 
 describe("memo share management", () => {
+  test("revocation retries succeed and keep the old link inaccessible", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_source/share";
+    expect((await app.request(`/api/public/shares/${sourceToken}`, {}, environment)).status).toBe(200);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await app.request(path, { method: "DELETE" }, environment);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true });
+      expect((await (await app.request(path, {}, environment)).json()).share).toBeNull();
+      expect((await app.request(`/api/public/shares/${sourceToken}`, {}, environment)).status).toBe(404);
+    }
+    expect((await app.request(`/api/public/shares/${targetToken}`, {}, environment)).status).toBe(200);
+    const unauthenticated = new Hono();
+    registerMemoShareRoutes(unauthenticated);
+    expect((await unauthenticated.request(path, { method: "DELETE" }, environment)).status).toBe(403);
+    sqlite.close();
+  });
+
   test("lists only live shares from the signed-in workspace without exposing passwords", async () => {
     const { sqlite, environment } = createDatabaseEnvironment();
     sqlite.query("INSERT INTO workspaces (id, name, is_personal) VALUES (?, ?, 1)").run("ws_other", "Other workspace");
@@ -529,4 +548,59 @@ test("workspace login cannot bypass a memo's password or attachment gate", async
   } finally {
     sqlite.close();
   }
+});
+
+describe("memo share password recovery", () => {
+  test("returns encrypted-at-rest passwords only through authenticated single-share reads", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_source/share";
+    const patch = (enabled) => app.request(path, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordProtected: enabled }),
+    }, environment);
+    const share = (await (await patch(true)).json()).share;
+    expect(sqlite.query("SELECT password_encrypted FROM memo_shares WHERE memo_id = 'memo_source'").get().password_encrypted).not.toContain(share.password);
+    const fresh = await app.request(path, {}, environment);
+    expect(fresh.headers.get("cache-control")).toBe("private, no-store");
+    expect((await fresh.json()).share.password).toBe(share.password);
+    const listed = await app.request("/api/v1/memo-shares", {}, environment);
+    for (const entry of (await listed.json()).shares) {
+      expect(entry.password).toBeUndefined();
+      expect(entry.password_encrypted).toBeUndefined();
+    }
+    const publicApp = new Hono();
+    registerMemoShareRoutes(publicApp);
+    expect((await publicApp.request(path, {}, environment)).status).toBe(403);
+    await patch(false);
+    expect(sqlite.query("SELECT password_encrypted FROM memo_shares WHERE memo_id = 'memo_source'").get().password_encrypted).toBeNull();
+    expect((await (await app.request(path, {}, environment)).json()).share.password).toBeUndefined();
+    sqlite.close();
+  });
+});
+
+describe("one-step memo sharing", () => {
+  test("concurrent creation and retries reuse one link; reopening preserves its password", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_private/share";
+    const responses = await Promise.all([
+      app.request(path, { method: "POST" }, environment),
+      app.request(path, { method: "POST" }, environment),
+    ]);
+    const shares = await Promise.all(responses.map(async (response) => (await response.json()).share));
+    expect(shares[0].token).toBe(shares[1].token);
+    expect(sqlite.query("SELECT COUNT(*) AS count FROM memo_shares WHERE memo_id = 'memo_private'").get().count).toBe(1);
+    const protectedShare = (await (await app.request(path, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordProtected: true }),
+    }, environment)).json()).share;
+    const reopened = (await (await app.request(path, { method: "POST" }, environment)).json()).share;
+    expect(reopened.token).toBe(protectedShare.token);
+    expect(reopened.password).toBe(protectedShare.password);
+    expect(reopened.passwordProtected).toBe(true);
+    await app.request(path, { method: "DELETE" }, environment);
+    expect((await (await app.request(path, {}, environment)).json()).share).toBeNull();
+    sqlite.close();
+  });
 });

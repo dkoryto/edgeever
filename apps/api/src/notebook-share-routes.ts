@@ -24,6 +24,7 @@ import { getAuditActor, getWorkspaceId, requireUser } from "./request-auth";
 import { serveSharedResource } from "./share-routes";
 import { allowPasswordProtectedShare, setShareAccessCookie } from "./share-http-access";
 import { isShareUnlockBlocked, nextShareUnlockFailure, type ShareUnlockState } from "./share-access";
+import { encryptSharePassword, readSharePassword } from "./share-password-encryption";
 import { generateSharePassword } from "./share-password";
 
 // Every public query starts at the live share, and constrains every level to
@@ -39,6 +40,7 @@ const publicTreeSql = `WITH RECURSIVE tree(id, workspace_id) AS (
 
 type ShareRow = {
   password_hash: string | null;
+  password_encrypted: string | null;
   notebook_id: string;
   notebook_name: string;
   token: string;
@@ -54,7 +56,7 @@ const mapShare = (row: ShareRow, password?: string): NotebookShare => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
-const selectShareSql = `SELECT ns.notebook_id, n.name AS notebook_name, ns.password_hash, ns.token, ns.created_at, ns.updated_at
+const selectShareSql = `SELECT ns.notebook_id, n.name AS notebook_name, ns.password_encrypted, ns.password_hash, ns.token, ns.created_at, ns.updated_at
   FROM notebook_shares ns JOIN notebooks n ON n.id = ns.notebook_id AND n.workspace_id = ns.workspace_id
   WHERE ns.workspace_id = ? AND n.is_deleted = 0`;
 const validToken = (token: string) => /^[A-Za-z0-9_-]{43}$/.test(token);
@@ -78,7 +80,7 @@ export const registerNotebookShareRoutes = (app: Hono<AppEnv>) => {
       .bind(getWorkspaceId(c), c.req.param("id"))
       .first<ShareRow>();
     c.header("Cache-Control", "private, no-store");
-    return c.json({ share: row ? mapShare(row) : null });
+    return c.json({ share: row ? mapShare(row, row.password_hash ? await readSharePassword(row.password_encrypted, row.token, c.env, row.password_hash) : undefined) : null });
   });
   app.post("/api/v1/notebooks/:id/share", async (c) => {
     const denied = requireUser(c);
@@ -125,7 +127,7 @@ export const registerNotebookShareRoutes = (app: Hono<AppEnv>) => {
         {},
       );
     c.header("Cache-Control", "private, no-store");
-    return c.json({ share: mapShare(row) });
+    return c.json({ share: mapShare(row, row.password_hash ? await readSharePassword(row.password_encrypted, row.token, c.env, row.password_hash) : undefined) });
   });
   app.patch("/api/v1/notebooks/:id/share", zValidator("json", NotebookShareUpdateSchema), async (c) => {
     const denied = requireUser(c);
@@ -137,10 +139,11 @@ export const registerNotebookShareRoutes = (app: Hono<AppEnv>) => {
     if (!existing) return notFound(c, "Active share not found");
     const password = c.req.valid("json").passwordProtected ? generateSharePassword() : undefined;
     const passwordHash = password ? await hashPassword(password) : null;
+    const encrypted = password ? await encryptSharePassword(password, existing.token, c.env) : null;
     const now = isoNow();
-    await c.env.storage.db.prepare(`UPDATE notebook_shares SET password_hash = ?, unlock_failed_count = 0,
+    await c.env.storage.db.prepare(`UPDATE notebook_shares SET password_hash = ?, password_encrypted = ?, unlock_failed_count = 0,
       unlock_window_started_at = NULL, unlock_blocked_until = NULL, updated_at = ?
-      WHERE notebook_id = ? AND workspace_id = ?`).bind(passwordHash, now, notebookId, workspaceId).run();
+      WHERE notebook_id = ? AND workspace_id = ?`).bind(passwordHash, encrypted, now, notebookId, workspaceId).run();
     const actor = getAuditActor(c);
     await audit(c.env.storage.db, actor.actorType, actor.actorId,
       password ? (existing.password_hash ? "notebook.share_password_rotate" : "notebook.share_password_set") : "notebook.share_password_clear",

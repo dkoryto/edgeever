@@ -203,3 +203,56 @@ describe("guarded desktop plugin saves", () => {
     } finally { window.edgeeverDesktop.sidecarRequest = request; }
   });
 });
+
+describe("desktop note duplication", () => {
+  const withDuplicateHarness = async (outboxItems, run) => {
+    const { mock } = await import("bun:test");
+    const syncCalls = [];
+    mock.module("@/lib/desktop-sync", () => ({ syncDesktopData: async () => { syncCalls.push("sync"); return { memoIdMappings: new Map() }; } }));
+    const { api } = await import("./api.ts");
+    const request = window.edgeeverDesktop.sidecarRequest;
+    const duplicate = api.duplicateMemo;
+    const onLine = Object.getOwnPropertyDescriptor(globalThis.navigator, "onLine");
+    Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: true });
+    const calls = [];
+    const apiCalls = [];
+    api.duplicateMemo = async (memoId, input) => {
+      apiCalls.push({ memoId, input });
+      return { memo: { id: "memo_copy", title: input.title, contentMarkdown: "Copy", contentJson: { type: "doc", content: [] } } };
+    };
+    window.edgeeverDesktop.sidecarRequest = async (method, params) => {
+      calls.push({ method, params });
+      if (method === "sync.outbox.list") return { items: outboxItems };
+      if (method === "memo.get") return { memo: { id: params.memoId, title: "Plan (copy)", contentMarkdown: "Copy", contentJson: { type: "doc", content: [] } } };
+      return {};
+    };
+    try {
+      await run({ calls, apiCalls, syncCalls });
+    } finally {
+      window.edgeeverDesktop.sidecarRequest = request;
+      api.duplicateMemo = duplicate;
+      if (onLine) Object.defineProperty(globalThis.navigator, "onLine", onLine);
+      else delete globalThis.navigator.onLine;
+    }
+  };
+
+  test("synchronizes first, copies on the server and stores the copy in the sidecar", async () => {
+    await withDuplicateHarness([], async ({ calls, apiCalls, syncCalls }) => {
+      const result = await createDesktopRepository().duplicateMemo("memo_plan", { title: "Plan (copy)" });
+
+      expect(syncCalls).toEqual(["sync"]);
+      expect(apiCalls).toEqual([{ memoId: "memo_plan", input: { title: "Plan (copy)" } }]);
+      expect(calls.map((call) => call.method)).toEqual(["sync.outbox.list", "sync.apply", "memo.get"]);
+      expect(calls[1].params.changes[0]).toMatchObject({ entityType: "memo", operation: "upsert", entityId: "memo_copy" });
+      expect(result.memo).toMatchObject({ id: "memo_copy", title: "Plan (copy)" });
+    });
+  });
+
+  test("refuses while the note still has unsynchronized changes", async () => {
+    await withDuplicateHarness([{ id: 1, kind: "memo.update", entityId: "memo_plan" }], async ({ apiCalls }) => {
+      await expect(createDesktopRepository().duplicateMemo("memo_plan", { title: "Plan (copy)" }))
+        .rejects.toThrow("memo_duplicate_pending_changes");
+      expect(apiCalls).toEqual([]);
+    });
+  });
+});

@@ -53,6 +53,14 @@ describe("memo template seeds", () => {
       expect(localizeDefaultMemoTemplate(custom, "pl")).toBe(custom);
     });
 
+    test("keeps a default template whose tags were changed", () => {
+      const retagged = stored("zh-CN", { tags: ["template", "quick-note", "mine"] });
+      const reordered = stored("zh-CN", { tags: ["quick-note", "template"] });
+
+      expect(localizeDefaultMemoTemplate(retagged, "pl")).toBe(retagged);
+      expect(localizeDefaultMemoTemplate(reordered, "pl")).toBe(reordered);
+    });
+
     test("does not mix fields from different translations", () => {
       const mixed = stored("zh-CN", { description: quickNote.translations["en-US"].description });
 

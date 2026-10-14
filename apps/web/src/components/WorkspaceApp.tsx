@@ -50,7 +50,6 @@ import { cn } from "@/lib/utils";
 import { isBrowserOffline, isBrowserOnline } from "@/lib/network-status";
 import { createDefaultDiagramDocument, createDefaultInfographicDocument, hasPosterDocumentMarker, posterFallbackMarkdown, serializePosterDocument, createDefaultTableDocument, diagramFallbackMarkdown, getNotebookScopeIds, hasTableDocumentMarker, infographicFallbackMarkdown, markdownToDoc, parseDiagramDocument, parseInfographicDocument, parseTableDocument, serializeDiagramDocument, serializeInfographicDocument, serializeTableDocument, tableFallbackMarkdown, type NoteCreateKind, type Notebook, type AuthUser, type MemoSummary, type MemoDetail, type MemoTemplate as SavedMemoTemplate } from "@edgeever/shared";
 import { toggleMobileMemoSelection } from "@edgeever/shared/mobile-ui";
-import { localizeDefaultMemoTemplate } from "@edgeever/shared/memo-template-seeds";
 import type {
   Pane,
   MemoView,
@@ -680,12 +679,7 @@ export const WorkspaceApp = ({
     enabled: rightView === "templates",
   });
 
-  const savedTemplates = useMemo(
-    () => (templatesQuery.data?.templates ?? []).map((template) => (
-      localizeDefaultMemoTemplate(template, i18n.resolvedLanguage)
-    )),
-    [i18n.resolvedLanguage, templatesQuery.data],
-  );
+  const savedTemplates = templatesQuery.data?.templates ?? [];
 
   const notebooks = notebooksQuery.data?.notebooks ?? [];
   useEffect(() => {

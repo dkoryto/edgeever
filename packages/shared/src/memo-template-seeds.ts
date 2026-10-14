@@ -161,3 +161,45 @@ export const memoTemplateSeedTranslations = (locale: MemoTemplateSeedLocale) =>
     item.translationKey,
     item.translations[locale],
   ])) as Record<MemoTemplateSeed["translationKey"], MemoTemplateSeedTranslation>;
+
+type LocalizableMemoTemplate = {
+  id: string;
+  name: string;
+  description: string | null;
+  title: string | null;
+  contentMarkdown: string;
+};
+
+const findUntouchedSeedTranslation = (
+  template: LocalizableMemoTemplate,
+): MemoTemplateSeed | null => {
+  const templateSeed = DEFAULT_MEMO_TEMPLATE_SEEDS.find((item) => template.id.endsWith(`_template_${item.key}`));
+  if (!templateSeed) return null;
+  const untouched = Object.values(templateSeed.translations).some((translation) =>
+    template.name === translation.title
+    && template.title === translation.title
+    && template.description === translation.description
+    && template.contentMarkdown === translation.contentMarkdown);
+  return untouched ? templateSeed : null;
+};
+
+/**
+ * Shows a default template in the viewer's UI language while it still equals
+ * one of its seeded translations. Templates the user created or edited are
+ * returned unchanged.
+ */
+export const localizeDefaultMemoTemplate = <Template extends LocalizableMemoTemplate>(
+  template: Template,
+  locale: string | null | undefined,
+): Template => {
+  const templateSeed = findUntouchedSeedTranslation(template);
+  if (!templateSeed) return template;
+  const localized = localizeMemoTemplateSeed(templateSeed, locale);
+  return {
+    ...template,
+    name: localized.title,
+    title: localized.title,
+    description: localized.description,
+    contentMarkdown: localized.contentMarkdown,
+  };
+};

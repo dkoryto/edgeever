@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { isBrowserOffline, isBrowserOnline } from "@/lib/network-status";
 import { createDefaultDiagramDocument, createDefaultInfographicDocument, hasPosterDocumentMarker, posterFallbackMarkdown, serializePosterDocument, createDefaultTableDocument, diagramFallbackMarkdown, getNotebookScopeIds, hasTableDocumentMarker, infographicFallbackMarkdown, markdownToDoc, parseDiagramDocument, parseInfographicDocument, parseTableDocument, serializeDiagramDocument, serializeInfographicDocument, serializeTableDocument, tableFallbackMarkdown, type NoteCreateKind, type Notebook, type AuthUser, type MemoSummary, type MemoDetail, type MemoTemplate as SavedMemoTemplate } from "@edgeever/shared";
 import { toggleMobileMemoSelection } from "@edgeever/shared/mobile-ui";
+import { localizeDefaultMemoTemplate } from "@edgeever/shared/memo-template-seeds";
 import type {
   Pane,
   MemoView,
@@ -679,7 +680,12 @@ export const WorkspaceApp = ({
     enabled: rightView === "templates",
   });
 
-  const savedTemplates = templatesQuery.data?.templates ?? [];
+  const savedTemplates = useMemo(
+    () => (templatesQuery.data?.templates ?? []).map((template) => (
+      localizeDefaultMemoTemplate(template, i18n.resolvedLanguage)
+    )),
+    [i18n.resolvedLanguage, templatesQuery.data],
+  );
 
   const notebooks = notebooksQuery.data?.notebooks ?? [];
   useEffect(() => {
@@ -1337,14 +1343,14 @@ export const WorkspaceApp = ({
   });
 
   const useTemplateMutation = useMutation({
-    mutationFn: async (input: { templateId: string; notebookId: string }) => {
+    mutationFn: async (input: { templateId: string; notebookId: string; locale?: string }) => {
       const requiresRemoteMemo = requiresRemoteMemoForStandaloneMobileEditor({
         mobileViewport: !isDesktopViewport(),
         desktopRuntime: Boolean(window.edgeeverDesktop?.isAvailable),
       });
       const data = requiresRemoteMemo
-        ? await api.useTemplate(input.templateId, input.notebookId)
-        : await repository.useTemplate(input.templateId, input.notebookId);
+        ? await api.useTemplate(input.templateId, input.notebookId, input.locale)
+        : await repository.useTemplate(input.templateId, input.notebookId, input.locale);
       if (requiresRemoteMemo) notifyRepositoryMutation(localDataScope, { type: "note.created", note: data.memo });
       await putLocalMemo(localDataScope, data.memo);
       return data;
@@ -1994,7 +2000,11 @@ export const WorkspaceApp = ({
 
   const handleUseSavedTemplate = (template: SavedMemoTemplate) => {
     if (!createMemoNotebookId || memoView === "trash") return;
-    useTemplateMutation.mutate({ templateId: template.id, notebookId: createMemoNotebookId });
+    useTemplateMutation.mutate({
+      templateId: template.id,
+      notebookId: createMemoNotebookId,
+      locale: i18n.resolvedLanguage,
+    });
   };
 
   const handleMobileDefaultEditConsumed = useCallback(() => {

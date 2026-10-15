@@ -209,6 +209,40 @@ describe("duplicate a note", () => {
     expect(fixture.sqlite.query("SELECT COUNT(*) AS count FROM memos").get().count).toBe(memoCount);
   });
 
+  test("keeps the copy's files when reading the committed copy fails", async () => {
+    const fixture = setup();
+    const { memo } = await createSourceNote(fixture);
+    const { db } = fixture.storage;
+    const batch = db.batch.bind(db);
+    const prepare = db.prepare.bind(db);
+    let committed = false;
+    db.batch = async (statements) => {
+      const result = await batch(statements);
+      committed = true;
+      return result;
+    };
+    // The first database read after the write batch fails, as a transient error would.
+    db.prepare = (sql) => {
+      if (committed) {
+        db.prepare = prepare;
+        throw new Error("database read failed");
+      }
+      return prepare(sql);
+    };
+
+    await expect(duplicateMemoRecord(fixture.context, memo.id, {}, actor, "admin")).rejects.toThrow("database read failed");
+    db.batch = batch;
+    db.prepare = prepare;
+
+    const copy = fixture.sqlite.query("SELECT id FROM memos WHERE id <> ? AND title = 'Trip plan'").get(memo.id);
+    expect(copy).not.toBeNull();
+    const copiedResources = resourceRows(fixture.sqlite, copy.id);
+    expect(copiedResources).toHaveLength(2);
+    for (const resource of copiedResources) {
+      expect(await fixture.readObject(resource.object_key)).not.toBeNull();
+    }
+  });
+
   test("fails without a partial copy when a source file is missing from storage", async () => {
     const fixture = setup();
     const { memo } = await createSourceNote(fixture);

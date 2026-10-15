@@ -280,8 +280,19 @@ export const createDesktopRepository = (): EdgeEverRepository => ({
     // The server copies the note, so its local edits are synchronized first.
     const { syncDesktopData } = await import("@/lib/desktop-sync");
     await syncDesktopData();
-    const pending = await request("sync.outbox.list", { limit: 500, includeConflicts: true });
-    if (pending.items.some((item) => item.entityId === memoId)) {
+    // The sidecar lists at most 200 outbox items, so a change of this note
+    // further down the queue cannot be seen. Duplicate only when the whole
+    // outstanding queue was listed and none of it belongs to this note.
+    const [status, outbox] = await Promise.all([
+      request("sync.status", {}),
+      request("sync.outbox.list", { limit: 200, includeConflicts: true }),
+    ]);
+    const outstanding = status.pending + status.error + status.conflict;
+    if (
+      status.syncing > 0
+      || outbox.items.length < outstanding
+      || outbox.items.some((item) => item.entityId === memoId)
+    ) {
       throw new Error("memo_duplicate_pending_changes");
     }
     const result = await api.duplicateMemo(memoId, input);

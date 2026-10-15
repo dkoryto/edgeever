@@ -219,18 +219,24 @@ export const duplicateMemoRecord = async (
         resourceCount: copies.length,
       }),
     ]);
-    const memo = await getMemoDetail(db, workspaceId, newMemoId);
-    if (memo) return memo;
-    // The notebook was removed between the check and the write, so the memo
-    // row was not inserted; remove what was written for it.
-    await db.batch([
-      db.prepare(`DELETE FROM resources WHERE memo_id = ?`).bind(newMemoId),
-      db.prepare(`DELETE FROM memo_search_documents WHERE memo_id = ?`).bind(newMemoId),
-      db.prepare(`DELETE FROM memo_contents WHERE memo_id = ?`).bind(newMemoId),
-    ]);
-    throw new AppError("not_found", "Notebook not found", 404);
   } catch (error) {
+    // Nothing references the copied objects until the batch commits.
     await deleteWrittenObjects();
     throw error;
   }
+
+  // From here on the committed rows reference the copied objects, so a failed
+  // read must never remove them.
+  const memo = await getMemoDetail(db, workspaceId, newMemoId);
+  if (memo) return memo;
+  // The notebook was removed between the check and the write, so the memo
+  // row was not inserted. Remove the rows written for it first, then the
+  // objects they referenced.
+  await db.batch([
+    db.prepare(`DELETE FROM resources WHERE memo_id = ?`).bind(newMemoId),
+    db.prepare(`DELETE FROM memo_search_documents WHERE memo_id = ?`).bind(newMemoId),
+    db.prepare(`DELETE FROM memo_contents WHERE memo_id = ?`).bind(newMemoId),
+  ]);
+  await deleteWrittenObjects();
+  throw new AppError("not_found", "Notebook not found", 404);
 };

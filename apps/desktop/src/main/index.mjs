@@ -1832,6 +1832,8 @@ const startApplication = async () => {
   });
   const acpRuntime = registerAcpIpc(ipcMain, createAcpHostRuntime({
     adapterStore: join(app.getPath("userData"), "acp-adapters"),
+    adapterFetchImpl: (url, init) => net.fetch(url, { ...init, credentials: "omit" }),
+    onUpdateDiagnostic: (details) => { void writeDiagnostic("acp.adapter-update-failed", details); },
     onDiagnostic: (details) => { void writeDiagnostic("acp.adapter-stderr", details); },
     onProcessDiagnostic: ({ event, ...details }) => { void writeDiagnostic(`acp.adapter-${event}`, details); },
     mcpScriptPath: app.isPackaged

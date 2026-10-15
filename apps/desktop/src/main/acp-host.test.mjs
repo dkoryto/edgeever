@@ -104,7 +104,10 @@ if (${workBuddyAccountApi ? "true" : "false"}) {
 if (${workBuddyUnreadable ? "true" : "false"}) authenticated = true;
 const restoredAccount = authenticated;
 const save = () => writeFileSync(reportPath, JSON.stringify(report));
-if (${workBuddyAccountApi ? "true" : "false"}) {
+// Like WorkBuddy, serve the account API only when started with --serve, which
+// sets SERVER__PORT. Probes and chats start without it, and listening on port
+// NaN is an error in Node and newer Bun versions.
+if (${workBuddyAccountApi ? "true" : "false"} && process.env.SERVER__PORT) {
   const { createServer } = await import("node:http");
   const server = createServer(async (req, res) => {
     if (req.headers.authorization !== "Bearer " + process.env.CODEBUDDY_GATEWAY_PASSWORD) {
@@ -348,7 +351,13 @@ describe("ACP command allow-list", () => {
       for (const name of ["claude-agent-acp", "openclaw", "hermes"]) {
         await writeFile(path.join(directory, name), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
       }
-      const deps = { platform: "darwin", pathEnv: directory, home: directory };
+      // Only the temporary directory exists, so commands installed on the
+      // machine running the tests (for example in /opt/homebrew/bin) are ignored.
+      const onlyTemporaryDirectory = (candidate) => {
+        if (!candidate.startsWith(directory)) throw Object.assign(new Error(`ENOENT: ${candidate}`), { code: "ENOENT" });
+        return realpathSync(candidate);
+      };
+      const deps = { platform: "darwin", pathEnv: directory, home: directory, realpathSync: onlyTemporaryDirectory };
       expect(resolveAcpCommand({ id: "claudeCode" }, deps).command).toMatchObject({ command: realpathSync(path.join(directory, "claude-agent-acp")), args: [] });
       expect(resolveAcpCommand({ id: "openClaw" }, deps).command).toMatchObject({ command: realpathSync(path.join(directory, "openclaw")), args: ["acp"] });
       expect(resolveAcpCommand({ id: "hermesAgent" }, deps).command).toMatchObject({ command: realpathSync(path.join(directory, "hermes")), args: ["acp"] });
@@ -357,6 +366,30 @@ describe("ACP command allow-list", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  test("records sanitized update failures and clears them after a manual retry including no-op success", async () => {
+    let fail = true;
+    const diagnostics = [];
+    const runtime = createAcpHostRuntime({
+      onUpdateDiagnostic: (event) => diagnostics.push(event),
+      adapterManager: {
+        get: (id) => id === "antigravity" ? { version: "1.3.0", command: { command: "/tmp/agy", args: [] } } : null,
+        installedIds: () => ["antigravity"],
+        install: async () => {
+          if (fail) throw Object.assign(new Error("fetch failed https://example.com/?token=private"), { updateStage: "download", cause: { code: "ETIMEDOUT" } });
+          return { updated: false, version: "1.3.0" };
+        },
+      },
+    });
+    const [result] = await runtime.updateInstalled();
+    expect(result.reason).toBe("download: fetch failed [url] (ETIMEDOUT)");
+    expect(runtime.listAdapters().find((item) => item.id === "antigravity").updateError).toBe(result.reason);
+    expect(diagnostics).toEqual([{ id: "antigravity", reason: result.reason }]);
+    await expect(runtime.installAdapter("antigravity")).rejects.toThrow(result.reason);
+    fail = false;
+    expect(await runtime.installAdapter("antigravity")).toEqual({ updated: false, version: "1.3.0" });
+    expect(runtime.listAdapters().find((item) => item.id === "antigravity").updateError).toBeUndefined();
   });
 
   test("automatically installs only a detected agent missing its ACP connector", async () => {

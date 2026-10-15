@@ -75,6 +75,9 @@ export const TemplateUpdateSchema = z.object({
 
 export const TemplateUseSchema = z.object({
   notebookId: z.string().trim().min(1),
+  // The client's UI language. Default templates nobody edited are used in
+  // this language; without it every template is used as stored.
+  locale: z.string().trim().min(1).max(64).optional(),
 });
 
 const ScheduledPluginCommandPayloadSchema = z.object({

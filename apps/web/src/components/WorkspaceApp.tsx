@@ -26,7 +26,7 @@ import { QuickMemoSwitcher } from "./QuickMemoSwitcher";
 import { AppConfirmDialog, MemoDeleteConfirmDialog, NotebookNameDialog } from "./dialogs/ConfirmDialogs";
 import { PluginPanelDialog } from "./plugins/PluginPanelDialog";
 import { shouldDiscardPluginNoteSearchRequest } from "./editor/note-search";
-import { api, getOrCreateClientDeviceId } from "@/lib/api";
+import { api, ApiRequestError, getOrCreateClientDeviceId } from "@/lib/api";
 import { useShowDescendantNotesPreference } from "@/lib/descendant-notes-preference";
 import { MarkdownExportMemoryLimitError, type MarkdownExportProgress } from "@/lib/markdown-export";
 import { exportSelectedMemosAsMarkdownZip } from "@/lib/selected-markdown-export";
@@ -1404,6 +1404,35 @@ export const WorkspaceApp = ({
     },
   });
 
+  const duplicateMemoMutation = useMutation({
+    mutationFn: (input: { memoId: string; title: string }) => repository.duplicateMemo(input.memoId, { title: input.title }),
+    onSuccess: async (data) => {
+      cacheMemoDetail(queryClient, data.memo, "notebook");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["memos"] }),
+        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+      ]);
+      setRightView("editor");
+      setSelectedMemoId(data.memo.id);
+      setActivePane("editor");
+    },
+    onError: (error) => {
+      const code = error instanceof ApiRequestError ? error.code : error instanceof Error ? error.message : null;
+      setAppNoticeDialog({
+        title: t("editor.duplicateFailedTitle"),
+        description: code === "memo_duplicate_offline"
+          ? t("editor.duplicateOffline")
+          : code === "memo_duplicate_pending_changes"
+            ? t("editor.duplicatePendingChanges")
+            : code === "duplicate_too_large"
+              ? t("editor.duplicateTooLarge")
+              : code === "duplicate_resource_missing" || code === "duplicate_unsupported"
+                ? t("editor.duplicateFilesUnavailable")
+                : t("editor.duplicateFailed"),
+      });
+    },
+  });
+
   const moveMemosMutation = useMutation({
     mutationFn: repository.moveMemos,
     onSuccess: async () => {
@@ -2102,6 +2131,14 @@ export const WorkspaceApp = ({
         onSuccess: clearMemoSelection,
       }
     );
+  };
+
+  const handleDuplicateMemo = (memo: { id: string; title: string | null }) => {
+    if (duplicateMemoMutation.isPending || memoView === "trash") return;
+    duplicateMemoMutation.mutate({
+      memoId: memo.id,
+      title: t("editor.duplicateTitle", { title: memo.title?.trim() || t("common.untitledMemo") }).slice(0, 160),
+    });
   };
 
   const handleMerge = () => {
@@ -3335,6 +3372,7 @@ export const WorkspaceApp = ({
                 });
               }}
               onMerge={handleMerge}
+              onDuplicateMemo={handleDuplicateMemo}
               onDeleteMemo={handleDeleteMemoFromList}
               onEmptyTrash={handleEmptyTrash}
               onRestoreMemo={handleRestoreMemoFromList}
@@ -3721,6 +3759,7 @@ export const WorkspaceApp = ({
                     }}
                     onMobileDefaultEditConsumed={handleMobileDefaultEditConsumed}
                     onSaveAsTemplate={handleSaveAsTemplate}
+                    onDuplicateMemo={handleDuplicateMemo}
                     />
                       )}
                     </EditorPaneErrorBoundary>

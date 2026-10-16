@@ -16,7 +16,7 @@ const fixture=(name)=>createDocument(readFileSync(new URL(`./fixtures/platforms/
 const read=(name,doc=fixture(name))=>name.startsWith("jike") ? readJike(doc,urls[name]) : name.startsWith("douban") ? readDouban(doc,platformTarget(urls[name]),urls[name]) : readArticle(doc,urls[name],"公众号");
 
 test("article URLs normalize aliases and tracking, retaining only WeChat query identity/signature",()=>{
-  for (const [name,url] of Object.entries(urls)) expect(platformTarget(url+"?from=share#comments")?.url).toBe(url);
+  for (const url of Object.values(urls)) expect(platformTarget(url+"?from=share#comments")?.url).toBe(url);
   const long="https://mp.weixin.qq.com/s?__biz=MzA%3D%3D&mid=123&idx=1&sn=abc&scene=21&pass_ticket=unused";
   expect(platformTarget(long)).toEqual({platform:"wechat",id:"MzA==/123/1",url:"https://mp.weixin.qq.com/s?__biz=MzA%3D%3D&mid=123&idx=1&sn=abc"});
   expect(platformTarget(long.replace("&sn=abc", ""))?.platform).toBe("wechat");

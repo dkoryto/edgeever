@@ -9,7 +9,6 @@ import {
   Gradient,
   Path,
   Shadow,
-  Point,
   util,
   type FabricObject,
 } from "fabric";

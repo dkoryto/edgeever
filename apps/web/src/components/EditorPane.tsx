@@ -12,13 +12,11 @@ import {
   History,
   RotateCcw,
   Trash2,
-  Tags,
   ReplaceAll,
   Paperclip,
   Pencil,
   Sparkles,
   Type,
-  X,
   Check,
   CircleAlert,
   LoaderCircle,
@@ -49,13 +47,10 @@ import {
   nextTitleStatusClearance,
 } from "@/components/MemoEditorChromeDensity";
 import { MemoTitleInput } from "@/components/MemoTitleInput";
-import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorOutline } from "./EditorOutline";
 import { SelectionAiActions } from "./editor/SelectionAiActions";
@@ -69,7 +64,6 @@ import {
 } from "./editor/editor-instance-identity";
 import {
   analyzeMarkdownModeContent,
-  isMarkdownSourceUnchanged,
   resolveMarkdownModeContent,
 } from "./editor/editor-mode-content";
 import { useEditorMarkdownMode } from "./editor/useEditorMarkdownMode";
@@ -307,7 +301,6 @@ import {
   shouldInsertDroppedResourceFiles,
   isCreatedMemoEditorFocused,
   isEditorReady,
-  MemoSaveRequestError,
   releaseEditorMedia,
   resetEditorDocument,
   shouldRetryCreatedMemoFocus,
@@ -4143,7 +4136,7 @@ const RichEditorPane = ({
                   {onCreatePoster && !effectiveReadOnly && <DropdownMenuItem disabled={!memo || saveMutation.isPending} onSelect={() => {
                     const selection = editor?.state.selection;
                     const text = selection && !selection.empty ? editor?.state.doc.textBetween(selection.from, selection.to, "\n") ?? "" : editor?.getText() ?? memo?.contentText ?? "";
-                    void (async () => { if (!memo) return; if (hasUnsavedChangesRef.current) await saveMutation.mutateAsync(); await onCreatePoster(memoRef.current ?? memo, text); })().catch((error) => setSaveState("error"));
+                    void (async () => { if (!memo) return; if (hasUnsavedChangesRef.current) await saveMutation.mutateAsync(); await onCreatePoster(memoRef.current ?? memo, text); })().catch(() => setSaveState("error"));
                   }}>{t("poster.createFromNote")}</DropdownMenuItem>}
                   {!isMobileViewport && !useMobilePlainTextEditor && !useMarkdownSourceEditor && (
                     <DropdownMenuItem

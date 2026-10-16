@@ -31,7 +31,6 @@ import { sha256 } from "./hash-utils";
 import { getRequiredString } from "./mcp-json-rpc";
 import {
   escapeLike,
-  listMemos,
   mapMemoSummary,
   toFtsQuery,
   type MemoSummaryRow,

@@ -1972,14 +1972,42 @@ export const WorkspaceApp = ({
       });
       return;
     }
-    const diagram = kind ? createDefaultDiagramDocument(kind) : null;
-    createMemoMutation.mutate({
+    if (!kind) {
+      createMemoMutation.mutate({ notebookId: targetNotebookId, title: "", contentMarkdown: "", tags: [] });
+      return;
+    }
+    const seed = createDefaultDiagramDocument(kind, {
+      mindMapRoot: t("diagram.seed.mindMapRoot"),
+      mindMapCapture: t("diagram.seed.mindMapCapture"),
+      mindMapOrganize: t("diagram.seed.mindMapOrganize"),
+      mindMapShare: t("diagram.seed.mindMapShare"),
+      mindMapQuickNotes: t("diagram.seed.mindMapQuickNotes"),
+      mindMapSync: t("diagram.seed.mindMapSync"),
+      mindMapNotebooks: t("diagram.seed.mindMapNotebooks"),
+      mindMapPublicLinks: t("diagram.seed.mindMapPublicLinks"),
+      flowchartStart: t("diagram.seed.flowchartStart"),
+      flowchartProcess: t("diagram.seed.flowchartProcess"),
+      flowchartEnd: t("diagram.seed.flowchartEnd"),
+      architectureSystem: t("diagram.seed.architectureSystem"),
+      architectureClient: t("diagram.seed.architectureClient"),
+      architectureApi: t("diagram.seed.architectureApi"),
+      architectureDatabase: t("diagram.seed.architectureDatabase"),
+      architectureStorage: t("diagram.seed.architectureStorage"),
+      architectureQuery: t("diagram.seed.architectureQuery"),
+      architectureFiles: t("diagram.seed.architectureFiles"),
+    });
+    const createDiagramMemo = (diagram: typeof seed) => createMemoMutation.mutate({
       notebookId: targetNotebookId,
-      title: diagram ? (kind === "mind-map" ? t("diagram.mindMap") : kind === "architecture" ? t("diagram.architecture") : t("diagram.flowchart")) : "",
-      contentJson: diagram ? markdownToDoc(diagramFallbackMarkdown(diagram)) : undefined,
-      contentMarkdown: diagram ? serializeDiagramDocument(diagram) : "",
+      title: kind === "mind-map" ? t("diagram.mindMap") : kind === "architecture" ? t("diagram.architecture") : t("diagram.flowchart"),
+      contentJson: markdownToDoc(diagramFallbackMarkdown(diagram)),
+      contentMarkdown: serializeDiagramDocument(diagram),
       tags: [],
     });
+    // The layout module ships with the lazily loaded diagram editor. If it
+    // cannot load, keep the starter geometry rather than failing the note.
+    void import("@/lib/diagram-layout")
+      .then(({ fitDefaultDiagramLabels }) => fitDefaultDiagramLabels(seed), () => seed)
+      .then(createDiagramMemo);
   };
 
   const handleImportMarkdownFiles = async (files: File[]) => {

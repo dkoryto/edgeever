@@ -1138,7 +1138,7 @@ export default function PosterEditorPane({
         const sourceSession = requiresLocalEditSession(source)
           ? createLocalEditSession(source)
           : (await api.createMemoEditSession(source.id)).editSession;
-        const markdown = `${source.contentMarkdown}\n\n![${title.replace(/[\[\]\\\n]/g, " ")}](${resource.url})`;
+        const markdown = `${source.contentMarkdown}\n\n![${title.replace(/[[\]\\\n]/g, " ")}](${resource.url})`;
         const result = await repository.updateMemo(source, {
           expectedRevision: source.revision,
           expectedContentHash: source.contentHash,

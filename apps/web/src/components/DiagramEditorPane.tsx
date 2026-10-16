@@ -686,7 +686,7 @@ const DiagramInsertMenu = ({
 }) => {
   const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DiagramToolbarAddTrigger onPointerEnter={() => setOpen(true)} />
       <DropdownMenuContent align="start">
         {items.map((item) => {
@@ -875,7 +875,7 @@ const bindDiagramScrollerFit = (graph: Graph) => {
       gridWidth as number | undefined,
       gridHeight,
       padding as number | undefined,
-      applyDiagramScrollerFitOptions({ ...(options ?? {}) }, bounds),
+      applyDiagramScrollerFitOptions({ ...options }, bounds),
     );
   }) as typeof graph.fitToContent & { edgeeverBound?: boolean };
   bound.edgeeverBound = true;
@@ -1240,7 +1240,7 @@ const nodeMetadata = (
         text: diagramNodePresentation(node, kind).text,
         lineHeight: mindStyle?.visual.label.lineHeight ?? flowchartStyle?.label.lineHeight ?? architectureStyle?.label.lineHeight ?? 18,
       },
-      ...(architectureStyle?.attrs ?? {}),
+      ...architectureStyle?.attrs,
     },
     ...(hasPorts ? { ports: {
       groups: {

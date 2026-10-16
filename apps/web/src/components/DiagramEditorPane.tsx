@@ -686,7 +686,7 @@ const DiagramInsertMenu = ({
 }) => {
   const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DiagramToolbarAddTrigger onPointerEnter={() => setOpen(true)} />
       <DropdownMenuContent align="start">
         {items.map((item) => {

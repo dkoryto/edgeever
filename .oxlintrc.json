@@ -5,8 +5,7 @@
     "correctness": "error"
   },
   "rules": {
-    // Unused code is removed in a dedicated pass before this rule is enforced.
-    "no-unused-vars": "off"
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_", "ignoreRestSiblings": true }]
   },
   "overrides": [
     {

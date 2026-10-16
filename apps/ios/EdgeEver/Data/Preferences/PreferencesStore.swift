@@ -58,7 +58,7 @@ struct NoteImageSharePreferences: Codable, Equatable {
             theme = value
         }
         if let value = try? values.decode(String.self, forKey: .fontStyle),
-           ["auto", "serif", "sans", "mono", "kai"].contains(value) {
+           ["auto", "serif", "sans", "mono", "kai", "smiley", "wenkai", "zhuque", "heavy", "puhui", "puhui-heavy", "youshe", "shuhei"].contains(value) {
             fontStyle = value
         }
         if let value = try? values.decode(String.self, forKey: .fontSize),

@@ -2,6 +2,7 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const enUS = {
+  fontLoad: {"loading": "Loading font…", "ready": "Font ready", "error": "Font could not load", "retry": "Retry"},
   noteProperties: {"heading": "Note properties", "source": "Show YAML source", "name": "Property name", "type": "Property type", "add": "Add property", "remove": "Remove {{name}}", "invalidName": "Use a unique name that is not a system property.", "invalidYaml": "Properties need attention:", "invalidNumber": "Enter a valid number.", "listHint": "One value per line", "text": "Text", "list": "List", "number": "Number", "checkbox": "Checkbox", "date": "Date"},
   poster: {
     design: {
@@ -2480,7 +2481,18 @@ export const enUS = {
         serif: "Editorial Serif",
         sans: "Modern Sans",
         mono: "Geek Mono",
+        smiley: "Smiley Sans",
+        wenkai: "LXGW WenKai",
+        zhuque: "Zhuque Fangsong",
+        heavy: "Noto Sans SC Heavy",
+        puhui: "PuHuiTi",
+        puhuiHeavy: "PuHuiTi Heavy",
+        youshe: "YouShe Title",
+        shuhei: "Alimama ShuHei",
       },
+      remoteFontHint: "Downloadable fonts need a connection on first use and are cached. PuHuiTi and other recommended fonts use larger, complete original files.",
+      remoteFontError: "The font could not be loaded. Reconnect and retry, or choose another font.",
+      retry: "Retry",
       fontSize: "Font Size",
       fontSizes: {
         sm: "Compact",

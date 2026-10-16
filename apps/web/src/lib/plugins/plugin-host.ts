@@ -41,7 +41,6 @@ import {
   serializeTableDocument, tableFallbackMarkdown, structuredApiError,
   posterCapabilities, pluginPoster, pluginInfographic, applyPosterEdits, applyInfographicOperations, serializePosterDocument, serializeInfographicDocument,
 } from "./structured-note-api";
-import { api } from "@/lib/api";
 import type { EdgeEverRepository } from "@/lib/repository";
 import { WebPluginSecretStore, type PluginSecretStorage } from "@/lib/plugins/plugin-secret-store";
 import { WebPluginPackageStore, type CachedPluginPackage, type PluginPackageStorage } from "@/lib/plugins/plugin-package-store";

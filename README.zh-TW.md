@@ -292,6 +292,7 @@ EdgeEver 是免費開源專案。保持跨平台用戶端（macOS、Windows、Li
 - EdgeEver 的筆記產品設計也參考了 [Evernote（印象筆記）](https://evernote.com/)、[Notion](https://www.notion.com/) 等成熟筆記工具的公開產品體驗。相關功能由 EdgeEver 獨立設計與實作。
 - 心智圖與視覺化圖表筆記的產品設計參考了 [XMind](https://xmind.com/) 和 [ProcessOn](https://www.processon.com/) 等圖表工具的公開產品體驗。相關功能由 EdgeEver 獨立設計與實作。
 - EdgeEver 的海報設計工作台借鑑了向阳乔木（joeseesun）的 [Qiaomu Design](https://github.com/joeseesun/qiaomu-cover-design)，並基於其 MIT 開源授權改編了範本與字型排版引擎。
+- EdgeEver 圖片分享卡片的主題視覺與排版參考了 [流光卡片](https://fireflycard.shushiai.com/)，感謝其設計帶來的啟發。
 
 ## 商標與品牌使用
 

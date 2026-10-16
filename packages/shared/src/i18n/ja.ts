@@ -2,6 +2,7 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const ja = {
+  fontLoad: {"loading": "フォントを読み込み中…", "ready": "フォントの準備完了", "error": "フォントを読み込めませんでした", "retry": "再試行"},
   noteProperties: {"heading": "ノートのプロパティ", "source": "YAML ソースを表示", "name": "プロパティ名", "type": "プロパティの種類", "add": "プロパティを追加", "remove": "{{name}} を削除", "invalidName": "重複しない、システム予約名以外の名前を入力してください。", "invalidYaml": "プロパティを確認してください：", "invalidNumber": "有効な数値を入力してください。", "listHint": "1 行に 1 つの値", "text": "テキスト", "list": "リスト", "number": "数値", "checkbox": "チェックボックス", "date": "日付"},
   poster: {
     design: {
@@ -2469,7 +2470,18 @@ export const ja = {
         serif: "本文明朝",
         sans: "モダンゴシック",
         mono: "ギーク等幅",
+        smiley: "得意黒",
+        wenkai: "霞鶩文楷",
+        zhuque: "朱雀仿宋",
+        heavy: "思源黒体 Heavy",
+        puhui: "普恵体",
+        puhuiHeavy: "普恵体 Heavy",
+        youshe: "優設標題黒",
+        shuhei: "アリママ数黒体",
       },
+      remoteFontHint: "初回使用時にフォントを取得し、保存します。普恵体などの推奨書体は元の完全なファイルを使うため、初回の通信量が多くなります。",
+      remoteFontError: "フォントを読み込めませんでした。接続して再試行するか、別の書体を選んでください。",
+      retry: "再試行",
       fontSize: "文字サイズ",
       fontSizes: {
         sm: "コンパクト",

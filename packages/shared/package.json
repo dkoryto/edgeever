@@ -21,6 +21,8 @@
     "./mobile-ui": "./src/mobile-ui.ts",
     "./note-image-card": "./src/note-image-card.ts",
     "./note-image-assets": "./src/note-image-asset-urls.ts",
+    "./font-catalog": "./src/font-catalog.ts",
+    "./font-loader": "./src/font-loader.ts",
     "./note-image-fonts": "./src/note-image-fonts.ts",
     "./note-image-preferences": "./src/note-image-preferences.ts"
   },

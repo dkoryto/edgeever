@@ -1,6 +1,9 @@
 import { NOTE_IMAGE_FONT_NOTICES } from "./note-image-font-notices";
 import { NOTE_IMAGE_FONT_SUBSETS } from "./note-image-font-manifest";
 import { resolveTheme, type NoteImageTheme, type NoteImageFontStyle } from "./note-image-card";
+import { isRemoteNoteImageFont } from "./font-catalog";
+import { fontSubsetContains, loadCatalogFont } from "./font-loader";
+export { fontSubsetContains, createRemoteFontResourceLoader, loadRemoteFontResource } from "./font-loader";
 
 export const NOTE_IMAGE_THEME_FONTS = {
   gradient: "puhui", glass: "puhui", quote: "mincho", book: "song", memo: "misans",
@@ -40,26 +43,9 @@ const asDataUrl = (url: string): Promise<string> => {
   return pending;
 };
 
-export const fontSubsetContains = (range: string, points: ReadonlySet<number>) => {
-  const sorted = [...points].sort((a, b) => a - b);
-  return range.split(",").some(part => {
-    const [start, end = start] = part.trim().replace(/^U\+/i, "").split("-");
-    const lower = parseInt(start.replace(/\?/g, "0"), 16);
-    const upper = parseInt(end.replace(/\?/g, "F"), 16);
-    let left = 0;
-    let right = sorted.length;
-    while (left < right) {
-      const middle = (left + right) >>> 1;
-      if (sorted[middle] < lower) left = middle + 1;
-      else right = middle;
-    }
-    return left < sorted.length && sorted[left] <= upper;
-  });
-};
-
 /** Only embed subsets used by this card. The editor never eagerly loads entire CJK fonts. */
-export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, urls }: {
-  theme: NoteImageTheme; fontStyle?: NoteImageFontStyle; text: string; urls: Record<string, AssetUrl>;
+export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, urls, embed = true }: {
+  theme: NoteImageTheme; fontStyle?: NoteImageFontStyle; text: string; urls: Record<string, AssetUrl>; embed?: boolean;
 }) => {
   const active = resolveTheme(undefined, theme);
   const getAsset = (name: string) => {
@@ -68,12 +54,14 @@ export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, 
     return asDataUrl(typeof asset === "string" ? asset : asset.uri);
   };
   const points = new Set(Array.from(text, char => char.codePointAt(0)!));
-  const blocks = fontStyle === "auto"
-    ? NOTE_IMAGE_FONT_SUBSETS[NOTE_IMAGE_THEME_FONTS[active]].filter(block => fontSubsetContains(block.range, points))
-    : [];
+  const remote = isRemoteNoteImageFont(fontStyle);
+  const catalog = !remote && fontStyle === "auto" ? NOTE_IMAGE_FONT_SUBSETS[NOTE_IMAGE_THEME_FONTS[active]] : [];
+  const blocks = catalog.filter(block => fontSubsetContains(block.range, points));
   const fontFacesCss = (await Promise.all(blocks.map(async block => {
-    const data = await getAsset(block.asset);
     let loaded = loadedFaces.get(block.asset);
+    // Picker labels only need the face registered, not another base64 export copy.
+    const data = embed || !loaded ? await getAsset(block.asset) : "";
+    loaded = loadedFaces.get(block.asset);
     if (!loaded) {
       const face = new FontFace(block.family, `url("${data}")`, { weight: block.weight, unicodeRange: block.range });
       loaded = face.load().then(font => { document.fonts.add(font); return font; });
@@ -81,10 +69,12 @@ export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, 
       void loaded.catch(() => loadedFaces.delete(block.asset));
     }
     await loaded;
-    return `@font-face{font-family:"${block.family}";font-style:normal;font-weight:${block.weight};src:url("${data}");unicode-range:${block.range}}`;
+    return embed ? `@font-face{font-family:"${block.family}";font-style:normal;font-weight:${block.weight};src:url("${data}");unicode-range:${block.range}}` : "";
   }))).join("\n");
-  const fontCss = blocks.length ? `/*! ${NOTE_IMAGE_FONT_NOTICES.replaceAll("*/", "* /")} */\n${fontFacesCss}` : "";
-  const textureCss = active === "handwritten"
+  const fontCss = remote
+    ? await loadCatalogFont(fontStyle, text, { embed })
+    : embed && blocks.length ? `/*! ${NOTE_IMAGE_FONT_NOTICES.replaceAll("*/", "* /")} */\n${fontFacesCss}` : "";
+  const textureCss = embed && active === "handwritten"
     ? `.edgeever-image-wrapper{--ee-paper:url("${await getAsset("paper.png")}");--ee-paper-grain:url("${await getAsset("paper-text.png")}")}`
     : "";
   return { fontCss, css: `${fontCss}\n${textureCss}` };

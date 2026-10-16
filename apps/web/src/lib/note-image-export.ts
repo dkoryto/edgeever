@@ -1,3 +1,4 @@
+import type { FontLoadStatus } from "./font-load-state";
 import { prepareNoteImageAssets } from "@edgeever/shared/note-image-fonts";
 import { noteImageAssetUrls } from "@edgeever/shared/note-image-assets";
 import { toCanvas } from "html-to-image";
@@ -68,6 +69,7 @@ export type DownloadNoteImageOptions = NoteHtmlExportMeta & {
   readingTimeText?: string;
   styles: string;
   signal?: AbortSignal;
+  onFontLoadStatus?: (status: FontLoadStatus) => void;
 };
 
 export type PreparedNoteImage = {
@@ -211,6 +213,7 @@ export const createNoteImage = async ({
   readingTimeText = "",
   styles,
   signal,
+  onFontLoadStatus,
 }: DownloadNoteImageOptions): Promise<PreparedNoteImage> => {
   checkAborted(signal);
   const resolvedTheme = resolveTheme(background, theme);
@@ -218,7 +221,10 @@ export const createNoteImage = async ({
   const themeCfg = NOTE_IMAGE_THEMES[resolvedTheme];
 
   const prepared = await prepareNoteBodyHtmlForExport(bodyHtml);
-  const assets = await prepareNoteImageAssets({ theme: resolvedTheme, fontStyle, text: [title, notebook, ...(tags || []), updatedAt, author, readingTimeText, prepared.bodyHtml].join(" "), urls: noteImageAssetUrls });
+  onFontLoadStatus?.("loading");
+  const assets = await prepareNoteImageAssets({ theme: resolvedTheme, fontStyle, text: [title, notebook, ...(tags || []), updatedAt, author, readingTimeText, prepared.bodyHtml].join(" "), urls: noteImageAssetUrls })
+    .then(result => { onFontLoadStatus?.("ready"); return result; })
+    .catch(error => { onFontLoadStatus?.("error"); throw error; });
   checkAborted(signal);
   const host = document.createElement("div");
   host.style.cssText = [

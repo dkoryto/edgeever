@@ -239,6 +239,14 @@ const MOBILE_FONT_OPTIONS: Array<{ id: NoteImageFontStyle; labelZh: string; labe
   { id: "serif", labelZh: "文艺衬线", labelEn: "Serif" },
   { id: "sans", labelZh: "现代无衬线", labelEn: "Sans" },
   { id: "mono", labelZh: "极客等宽", labelEn: "Mono" },
+  { id: "smiley", labelZh: "得意黑", labelEn: "Smiley Sans" },
+  { id: "wenkai", labelZh: "霞鹜文楷", labelEn: "LXGW WenKai" },
+  { id: "zhuque", labelZh: "朱雀仿宋", labelEn: "Zhuque Fangsong" },
+  { id: "heavy", labelZh: "思源黑体 Heavy", labelEn: "Noto Sans SC Heavy" },
+  { id: "puhui", labelZh: "普惠体", labelEn: "PuHuiTi" },
+  { id: "puhui-heavy", labelZh: "普惠体 Heavy", labelEn: "PuHuiTi Heavy" },
+  { id: "youshe", labelZh: "优设标题黑", labelEn: "YouShe Title" },
+  { id: "shuhei", labelZh: "阿里妈妈数黑体", labelEn: "Alimama ShuHei" },
 ];
 
 const AuthenticatedResourceImage = ({
@@ -1707,6 +1715,10 @@ export const MemoDetailModal = ({
                   );
                 })}
               </View>
+
+              <Text style={imageShareStyles.choiceText}>{resolvedLocale === "zh-CN"
+                ? "下载型字体首次使用需联网，下载后缓存；普惠体等推荐字体保留完整文件，首次下载较大。"
+                : "Downloadable fonts need a connection on first use and are cached. PuHuiTi and other recommended fonts use complete original files, so initial downloads are larger."}</Text>
 
               <Text style={styles.actionSheetSectionTitle}>{resolvedLocale !== "zh-CN" ? "Content Elements" : "显示内容"}</Text>
               {([

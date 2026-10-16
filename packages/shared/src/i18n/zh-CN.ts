@@ -2,6 +2,7 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const zhCN = {
+  fontLoad: {"loading": "字体加载中…", "ready": "字体已就绪", "error": "字体加载失败", "retry": "重试"},
   noteProperties: {"heading": "笔记属性", "source": "显示 YAML 源码", "name": "属性名称", "type": "属性类型", "add": "添加属性", "remove": "删除 {{name}}", "invalidName": "请输入不重复且非系统保留的属性名称。", "invalidYaml": "请检查笔记属性：", "invalidNumber": "请输入有效数字。", "listHint": "每行一个值", "text": "文本", "list": "列表", "number": "数字", "checkbox": "复选框", "date": "日期"},
   poster: {
     design: {
@@ -2478,7 +2479,18 @@ export const zhCN = {
         serif: "文艺衬线",
         sans: "现代无衬线",
         mono: "极客等宽",
+        smiley: "得意黑",
+        wenkai: "霞鹜文楷",
+        zhuque: "朱雀仿宋",
+        heavy: "思源黑体 Heavy",
+        puhui: "普惠体",
+        puhuiHeavy: "普惠体 Heavy",
+        youshe: "优设标题黑",
+        shuhei: "阿里妈妈数黑体",
       },
+      remoteFontHint: "下载型字体首次使用需联网并缓存；普惠体等推荐字体使用完整文件，首次下载较大。",
+      remoteFontError: "字体未能加载，请联网重试，或选择其他字体。",
+      retry: "重试",
       fontSize: "字号大小",
       fontSizes: {
         sm: "紧凑",

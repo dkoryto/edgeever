@@ -2,6 +2,7 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const pl = {
+  fontLoad: {"loading": "Ładowanie czcionki…", "ready": "Czcionka gotowa", "error": "Nie udało się załadować czcionki", "retry": "Ponów próbę"},
   noteProperties: {"heading": "Właściwości notatki", "source": "Pokaż źródło YAML", "name": "Nazwa właściwości", "type": "Typ właściwości", "add": "Dodaj właściwość", "remove": "Usuń {{name}}", "invalidName": "Użyj unikalnej nazwy, która nie jest właściwością systemową.", "invalidYaml": "Sprawdź właściwości:", "invalidNumber": "Wprowadź poprawną liczbę.", "listHint": "Jedna wartość w wierszu", "text": "Tekst", "list": "Lista", "number": "Liczba", "checkbox": "Pole wyboru", "date": "Data"},
   poster: {
     design: {
@@ -2469,7 +2470,18 @@ export const pl = {
         serif: "Redakcyjna szeryfowa",
         sans: "Nowoczesna bezszeryfowa",
         mono: "Geekowska o stałej szerokości",
+        smiley: "Smiley Sans",
+        wenkai: "LXGW WenKai",
+        zhuque: "Zhuque Fangsong",
+        heavy: "Noto Sans SC Heavy",
+        puhui: "PuHuiTi",
+        puhuiHeavy: "PuHuiTi Heavy",
+        youshe: "YouShe Title",
+        shuhei: "Alimama ShuHei",
       },
+      remoteFontHint: "Czcionki są pobierane przy pierwszym użyciu i zapisywane lokalnie. PuHuiTi i inne polecane czcionki używają większych, pełnych plików.",
+      remoteFontError: "Nie udało się wczytać czcionki. Połącz się z siecią i spróbuj ponownie lub wybierz inną czcionkę.",
+      retry: "Spróbuj ponownie",
       fontSize: "Rozmiar czcionki",
       fontSizes: {
         sm: "Kompaktowy",

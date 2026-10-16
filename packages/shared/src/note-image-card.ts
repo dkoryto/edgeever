@@ -1,10 +1,12 @@
+import { CATALOG_FONT_STACKS } from "./font-catalog";
+
 export type NoteImageFormat = "jpeg" | "png";
 export const NOTE_IMAGE_THEME_OPTIONS = ["gradient", "glass", "quote", "book", "memo", "bento", "black-sun", "frame", "handwritten", "code"] as const;
 export type NoteImageActiveTheme = (typeof NOTE_IMAGE_THEME_OPTIONS)[number];
 type LegacyNoteImageTheme = "paper" | "press" | "highlight" | "slate" | "aurora" | "sunset" | "midnight" | "editorial" | "terminal" | "film" | "mint" | "lavender";
 export type NoteImageTheme = NoteImageActiveTheme | LegacyNoteImageTheme;
 export type NoteImageBackground = NoteImageTheme | "warm" | "notepad" | "xuan" | "polaroid";
-export type NoteImageFontStyle = "auto" | "sans" | "serif" | "mono" | "kai";
+export type NoteImageFontStyle = "auto" | "sans" | "serif" | "mono" | "kai" | "smiley" | "wenkai" | "zhuque" | "heavy" | "puhui" | "puhui-heavy" | "youshe" | "shuhei";
 export type NoteImageFontSize = "sm" | "md" | "lg";
 export type NoteImageCardWidth = "compact" | "standard" | "wide";
 export const NOTE_IMAGE_EXPORT_WIDTH = 768;
@@ -101,6 +103,7 @@ export const NOTE_IMAGE_FONT_FAMILIES: Record<Exclude<NoteImageFontStyle, "auto"
   serif: 'Georgia, "Nimbus Roman No9 L", "Songti SC", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN", "STSong", "AR PL New Sung", "SimSun", "Hiragino Mincho ProN", serif',
   mono: '"JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   kai: '"LXGW WenKai", "霞鹜文楷", "Kaiti SC", "STKaiti", "KaiTi", "KaiTi_GB2312", "BiauKai", "楷体", "STFangsong", "FangSong", serif',
+  ...CATALOG_FONT_STACKS,
 };
 
 export const NOTE_IMAGE_TEMPLATE_FONT_FAMILIES: Record<NoteImageActiveTheme, string> = {

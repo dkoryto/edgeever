@@ -1,4 +1,4 @@
-import { compactFlowchartNodeSize, flowchartNodePresentation, visualTextUnits } from "./diagram-node-presentation";
+import { flowchartNodePresentation, visualTextUnits } from "./diagram-node-presentation";
 export { compactFlowchartNodeSize, flowchartNodePresentation } from "./diagram-node-presentation";
 import { DIAGRAM_READABLE_MIN_SCALE, FLOWCHART_LAYOUT_SPACING } from "./diagram-flowchart-style";
 export {

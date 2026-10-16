@@ -9,17 +9,14 @@ import {
   useRef,
   useSyncExternalStore,
   type CSSProperties,
-  type ReactNode,
-  type MouseEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PluginPanelOpenOptions } from "@edgeever/plugin-api";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as m from "motion/react-m";
-import { Button } from "@/components/ui/button";
 import { MemoListPane, MemoSelectionActionBar } from "./MemoListPane";
 import { MobileBottomNav, MobileNotebookPicker } from "./WorkspaceMobileChrome";
 import { QuickMemoSwitcher } from "./QuickMemoSwitcher";
@@ -58,7 +55,6 @@ import type {
   AppNoticeDialogState,
   MobileBottomNavItem,
   NotebookDropPosition,
-  NotebookMoveOption,
   MemoFilterMode,
   MemoSortMode,
   MemoDocumentAction,

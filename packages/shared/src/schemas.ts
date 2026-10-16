@@ -1,3 +1,4 @@
+import { PUBLISHED_NOTE_BODY_FONTS } from "./sharing";
 import { z } from "zod";
 import {
   MAX_NOTE_PROSE_CSS_BYTES,
@@ -441,7 +442,7 @@ export const MemoShareUpdateSchema = SharePasswordUpdateSchema;
 export const NotebookShareUpdateSchema = SharePasswordUpdateSchema;
 
 export const NoteBodyFontUpdateSchema = z.object({
-  bodyFont: z.enum(["wenkai", "wenkai-screen", "zhuque", "source-han-serif", "neo-zhi-song", "source-han-sans", "source-serif"]).nullable(),
+  bodyFont: z.enum(PUBLISHED_NOTE_BODY_FONTS).nullable(),
 });
 
 const noteProseHexColor = z.string().regex(/^#[0-9a-f]{6}$/i);

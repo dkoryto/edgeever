@@ -265,7 +265,6 @@ const DiagramZoomPercentField = ({
 };
 
 export const DiagramToolbar = ({
-  appearance,
   canRedo,
   canUndo,
   hasSelection,

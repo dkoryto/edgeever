@@ -32,7 +32,7 @@ import {
   type MobileLocalePreference,
   type MobileMemoListDensity,
 } from "../lib/preferences";
-import { localizeUntitledMemoTitle, localizeMissingNotebookName, useMobileLocale } from "../lib/mobile-locale";
+import { localizeUntitledMemoTitle, localizeMissingNotebookName, toMobileSyncErrorSourceText, useMobileLocale } from "../lib/mobile-locale";
 import { useSession } from "../lib/session";
 import {
   clearMobileMemoUpdateQueueItem,
@@ -510,7 +510,7 @@ export const WorkspaceScreen = ({
     ? syncQueueItems.find((item) => item.memoId === selectedMemo.id) ?? null
     : null;
   const selectedMemoSyncStatus = selectedMemoSyncItem?.status ?? null;
-  const selectedMemoSyncError = selectedMemoSyncItem?.lastError ?? null;
+  const selectedMemoSyncError = toMobileSyncErrorSourceText(selectedMemoSyncItem?.lastError ?? null);
   const isRefreshing = notebooksQuery.isFetching || memosQuery.isFetching || searchQuery.isFetching || memoDetailQuery.isFetching;
   const selectedMemoIdList = Array.from(selectedMemoIds);
   const selectedMemos = visibleMemos.filter((memo) => selectedMemoIds.has(memo.id));

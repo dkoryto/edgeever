@@ -471,6 +471,7 @@ const RichEditorPane = ({
     setSaveState,
   } = useEditorSaveStatus();
   const [storageSaveError, setStorageSaveError] = useState(false);
+  const [saveErrorReasonKey, setSaveErrorReasonKey] = useState<string | null>(null);
   const [richTableEditBlocked, setRichTableEditBlocked] = useState(false);
   const revertingUnsafeMarkdownRef = useRef(false);
   const [hydratedEditorMemoId, setHydratedEditorMemoId] = useState<string | null>(null);
@@ -3016,6 +3017,7 @@ const RichEditorPane = ({
       }
 
       setSaveConflictInfo(null);
+      setSaveErrorReasonKey(failure.reasonKey);
       setSaveState("error");
     },
   });
@@ -3582,6 +3584,8 @@ const RichEditorPane = ({
     tagsText,
     title,
   });
+  const saveStatusReason = saveConflictReason
+    ?? (saveState === "error" && saveErrorReasonKey ? t(saveErrorReasonKey) : null);
 
   useLayoutEffect(() => {
     const title = headerTitleSlot;
@@ -4020,7 +4024,7 @@ const RichEditorPane = ({
                     : t("editor.uploadState.fileUploading")}
               </span>
             )}
-            <IconTooltip label={saveConflictReason ? `${saveStatusLabel}. ${saveConflictReason}` : saveStatusLabel}>
+            <IconTooltip label={saveStatusReason ? `${saveStatusLabel}. ${saveStatusReason}` : saveStatusLabel}>
             <m.span
               key={`${saveState}-${String(hasUnsavedChanges)}`}
               className={cn(
@@ -4029,7 +4033,7 @@ const RichEditorPane = ({
               )}
               role="status"
               aria-live="polite"
-              aria-label={saveState === "conflict" && saveConflictReason ? `${saveStatusLabel}. ${saveConflictReason}` : saveStatusLabel}
+              aria-label={saveStatusReason ? `${saveStatusLabel}. ${saveStatusReason}` : saveStatusLabel}
               {...statusSettleMotion}
             >
               {saveState === "saving" ? (
@@ -4049,8 +4053,8 @@ const RichEditorPane = ({
               className={cn("inline-flex max-w-[5.5rem] truncate rounded-full px-2 py-1 text-xs font-medium sm:hidden", mobileStatusClassName)}
               role="status"
               aria-live="polite"
-              title={saveConflictReason ?? undefined}
-              aria-label={saveState === "conflict" && saveConflictReason ? `${saveLabel}. ${saveConflictReason}` : undefined}
+              title={saveStatusReason ?? undefined}
+              aria-label={saveStatusReason ? `${saveLabel}. ${saveStatusReason}` : undefined}
               {...statusSettleMotion}
             >
               {mobileStatusLabel}

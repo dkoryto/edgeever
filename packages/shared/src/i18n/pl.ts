@@ -2345,6 +2345,9 @@ export const pl = {
       unsaved: "Niezapisane",
       storageUnavailable: "Lokalny magazyn przeglądarki przestał odpowiadać. Nie zamykaj tej strony, zamknij inne karty EdgeEver i spróbuj ponownie. Zanim wyczyścisz dane przeglądarki, skopiuj lokalny szkic.",
       storageRetry: "Ponów zapis",
+      errorReason: {
+        suspiciousOverwrite: "Zapis zablokowany: zmieniono tytuł, a jednocześnie zniknęła większość treści notatki. Sprawdź notatkę, skopiuj potrzebną treść i spróbuj ponownie.",
+      },
       conflictReason: {
         revisionWithVersions: "Notatka w chmurze została zaktualizowana (lokalna wersja bazowa {{expected}}, w chmurze {{current}}). Najczęstsze przyczyny: inna karta przeglądarki, inne urządzenie lub zmiana w chmurze podczas pracy offline. Skopiuj lokalny szkic, a potem użyj wersji z chmury, zanim zaczniesz ponownie edytować.",
         revision: "Notatka w chmurze została zaktualizowana w innym miejscu. Najczęstsze przyczyny: inna karta przeglądarki, inne urządzenie lub zmiana w chmurze podczas pracy offline. Skopiuj lokalny szkic, a potem użyj wersji z chmury, zanim zaczniesz ponownie edytować.",

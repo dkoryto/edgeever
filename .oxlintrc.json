@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    // Unused code is removed in a dedicated pass before this rule is enforced.
+    "no-unused-vars": "off"
+  },
+  "overrides": [
+    {
+      // Print windows deliberately load a preload that exposes no desktop bridge.
+      "files": ["apps/desktop/src/preload/print.cjs"],
+      "rules": { "unicorn/no-empty-file": "off" }
+    }
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/vendor/**",
+    "apps/ios/**",
+    "apps/site/.astro/**",
+    "apps/extension/dist-firefox/**",
+    "packages/plugin-api/dist/**"
+  ]
+}

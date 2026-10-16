@@ -112,6 +112,7 @@ export const useMobileAutomaticSync = ({
         requestedRef.current = false;
         requestedForceRef.current = false;
         void runRef.current(nextForce);
+        // oxlint-disable-next-line no-unsafe-finally -- the catch above handles every error, so nothing is overridden; the finally block is restructured separately
         return;
       }
 

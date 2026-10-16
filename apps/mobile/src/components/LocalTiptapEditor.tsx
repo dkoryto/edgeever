@@ -1718,9 +1718,9 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
                 disabled={(action.id === "undo" && ((historyState ?? 0) & 1) === 0)
                   || (action.id === "redo" && ((historyState ?? 0) & 2) === 0)
                   || (action.id === "increaseListIndent"
-                    && !Boolean(editor?.can().chain().focus().sinkListItem(activeListItemType).run()))
+                    && !editor?.can().chain().focus().sinkListItem(activeListItemType).run())
                   || (action.id === "decreaseListIndent"
-                    && !Boolean(editor?.can().chain().focus().liftListItem(activeListItemType).run()))}
+                    && !editor?.can().chain().focus().liftListItem(activeListItemType).run())}
                 icon={toolbarIcons[action.id]}
                 label={getMobileEditorToolbarActionLabel(action.id, props.locale)}
                 onRun={toolbarHandlers[action.id]}

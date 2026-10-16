@@ -348,6 +348,7 @@ export const AiDefaultModelUpdateSchema = z.object({
 });
 
 export const AiAttachmentSchema = z.object({
+  // oxlint-disable-next-line no-control-regex -- rejects control characters in attachment filenames
   filename: z.string().trim().min(1).max(255).regex(/^[^\u0000-\u001F\u007F]+$/),
   mediaType: z.enum(AI_ATTACHMENT_MEDIA_TYPES),
   base64Data: z.string().min(1).max(Math.ceil(MAX_AI_ATTACHMENT_BYTES / 3) * 4),

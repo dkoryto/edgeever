@@ -26,7 +26,7 @@
 
 
 
-EdgeEver is a modern, open-source notes and knowledge base workspace. It revives the beloved Evernote-style three-pane layout while offering an open data architecture and seamless AI Agent integration for complete ownership and smart productivity.
+EdgeEver is a modern, open-source notes and knowledge base workspace. It preserves the classic, high-efficiency three-pane productivity workflow (Tree View · Note List · Editor) while offering an open data architecture and seamless AI Agent integration for complete ownership and smart productivity.
 
 > 💡 **Serverless & 100% Free Forever**
 > EdgeEver can run within Cloudflare's free quotas with no server purchase or VPS maintenance. Users who prefer a VPS, NAS, or home server can deploy the same application with Docker.
@@ -35,7 +35,7 @@ EdgeEver is a modern, open-source notes and knowledge base workspace. It revives
 
 ## Why EdgeEver
 
-Many long-time **Evernote** users simply want a **reliable, open, and fast** personal knowledge base. However, existing mainstream solutions all present tradeoffs:
+Many users of **note-taking apps and personal knowledge bases** simply want a **reliable, open, and fast** personal knowledge base. However, existing mainstream solutions all present tradeoffs:
 
 * **Evernote**: Once offered the smoothest, most seamless multi-device cloud sync experience. Yet as it evolved into a full-featured commercial suite, ads and add-ons multiplied while system overhead climbed. Meanwhile, free-tier quotas tightened, premium AI subscriptions grew expensive, and it remains difficult to integrate into modern self-hosted and private AI workflows.
 * **Obsidian**: Open files, closed-source core. Official Sync is paid and third-party sync is tedious; relying entirely on flat local file scanning causes noticeable cold-start and search lag once notes reach thousands or heavy plugins are loaded; storing images and attachments alongside notes quickly bloats vaults, making mobile sync sluggish and leaving orphaned files behind; and it is overly heavy for lightweight, capture-anywhere use.

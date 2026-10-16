@@ -1777,6 +1777,8 @@ export const zhCN = {
       installFailed: "安装或连接检查失败，原版本已保留。",
       updateFailed: "自动更新失败，正在继续使用原版本。",
       updateFailureReason: "失败原因：{{reason}}",
+      connectionFailureReason: "连接失败原因：{{reason}}",
+      connectionFailureUnknown: "桌面端未返回具体原因。请重新检查连接，并提供桌面端诊断日志。",
       updateTimeoutHint: "下载或连接超时，请检查网络后重试。",
       updateNetworkHint: "无法连接更新服务，请检查网络和系统代理后重试。",
       retryUpdate: "重试更新",
@@ -3087,7 +3089,7 @@ export const zhCN = {
     sidebarClipperTitle: "安装 EdgeEver 浏览器剪藏插件",
     iosPrompt: {
       title: "将 EdgeEver 安装到主屏幕",
-      subtitle: "享受全屏独立窗口，体验如原生 App 般丝滑的印象笔记。",
+      subtitle: "享受全屏独立窗口，体验如原生 App 般丝滑的笔记与知识库工作区。",
       step1: "点击 Safari 浏览器底部的分享按钮",
       step2: "在菜单中找到并选择「添加到主屏幕」",
       dismiss: "我知道了",

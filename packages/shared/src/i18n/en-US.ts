@@ -1777,6 +1777,8 @@ export const enUS = {
       installFailed: "Installation or connection check failed. The previous version was kept.",
       updateFailed: "Automatic update failed. The previous version remains in use.",
       updateFailureReason: "Reason: {{reason}}",
+      connectionFailureReason: "Connection failure reason: {{reason}}",
+      connectionFailureUnknown: "The desktop app did not return a specific reason. Check the connection again and provide the desktop diagnostic log.",
       updateTimeoutHint: "The download or connection timed out. Check your network and retry.",
       updateNetworkHint: "Could not reach the update service. Check your network and system proxy, then retry.",
       retryUpdate: "Retry update",
@@ -3089,7 +3091,7 @@ export const enUS = {
     sidebarClipperTitle: "Install the EdgeEver Web Clipper",
     iosPrompt: {
       title: "Add EdgeEver to Home Screen",
-      subtitle: "Enjoy full screen independent window, experience Evernote as smooth as a native app.",
+      subtitle: "Enjoy a distraction-free full screen window with the smoothness of a native app.",
       step1: "Tap the Share button at the bottom of Safari browser",
       step2: "Find and select 'Add to Home Screen' in the menu",
       dismiss: "Got it",

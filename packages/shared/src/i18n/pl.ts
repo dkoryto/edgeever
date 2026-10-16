@@ -1766,6 +1766,8 @@ export const pl = {
       installFailed: "Instalacja lub sprawdzenie połączenia nie powiodło się. Zachowano poprzednią wersję.",
       updateFailed: "Automatyczna aktualizacja nie powiodła się. Nadal używana jest poprzednia wersja.",
       updateFailureReason: "Przyczyna: {{reason}}",
+      connectionFailureReason: "Przyczyna błędu połączenia: {{reason}}",
+      connectionFailureUnknown: "Aplikacja desktopowa nie zwróciła konkretnej przyczyny. Sprawdź połączenie ponownie i udostępnij dziennik diagnostyczny aplikacji.",
       updateTimeoutHint: "Pobieranie lub połączenie przekroczyło limit czasu. Sprawdź sieć i spróbuj ponownie.",
       updateNetworkHint: "Nie można połączyć się z usługą aktualizacji. Sprawdź sieć i systemowe ustawienia proxy, a następnie ponów próbę.",
       retryUpdate: "Ponów aktualizację",

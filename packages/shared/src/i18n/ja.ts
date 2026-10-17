@@ -2607,6 +2607,7 @@ export const ja = {
     expandOutlineHeading: "{{name}} を開く",
   },
   sharing: {
+    contentLabel: "共有されたノートの内容",
     siteHideContents: "目次を隠す",
     siteShowContents: "目次を表示",
     siteHome: "ホーム",

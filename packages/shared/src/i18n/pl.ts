@@ -2607,6 +2607,7 @@ export const pl = {
     expandOutlineHeading: "Rozwiń {{name}}",
   },
   sharing: {
+    contentLabel: "Treść udostępnionej notatki",
     siteHideContents: "Ukryj spis treści",
     siteShowContents: "Pokaż spis treści",
     siteHome: "Strona główna",

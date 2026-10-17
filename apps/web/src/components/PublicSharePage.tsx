@@ -26,6 +26,7 @@ import {
   type ShareBodyAccess,
   getMemoDisplayTitle,
 } from "@edgeever/shared";
+import { resolveSupportedLocale } from "@edgeever/shared/i18n/locales";
 import { applyEditorBodyFontPreference } from "@/lib/editor-body-font";
 import { createEdgeEverMathematics } from "@edgeever/shared/mathematics";
 import { PdfAttachment } from "@/components/editor/PdfAttachment";
@@ -105,7 +106,7 @@ const SharedRichText = ({ content }: { content: PublicMemoShare["contentJson"] }
     editorProps: {
       attributes: {
         class: "prose prose-slate max-w-none focus:outline-none",
-        "aria-label": "Shared note content",
+        "aria-label": t("sharing.contentLabel"),
       },
     },
   }, [content]);
@@ -402,13 +403,7 @@ export const PublicShareArticle = ({
             />
           ) : null}
           <SharedDocument
-            locale={
-              (i18n.resolvedLanguage || i18n.language || "zh-CN").startsWith(
-                "en",
-              )
-                ? "en-US"
-                : "zh-CN"
-            }
+            locale={resolveSupportedLocale(i18n.resolvedLanguage || i18n.language)}
             share={share}
             token={token}
             access={access}

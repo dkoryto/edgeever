@@ -2616,6 +2616,7 @@ export const zhCN = {
     expandOutlineHeading: "展开 {{name}}",
   },
   sharing: {
+    contentLabel: "分享的笔记内容",
     siteHideContents: "收起目录",
     siteShowContents: "展开目录",
     siteHome: "首页",

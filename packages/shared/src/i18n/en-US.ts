@@ -2618,6 +2618,7 @@ export const enUS = {
     expandOutlineHeading: "Expand {{name}}",
   },
   sharing: {
+    contentLabel: "Shared note content",
     siteHideContents: "Hide contents",
     siteShowContents: "Show contents",
     siteHome: "Home",

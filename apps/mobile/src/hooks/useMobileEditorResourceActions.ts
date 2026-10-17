@@ -8,6 +8,7 @@ import {
   saveMobileResourceAs,
   type MobileResourceTarget,
 } from "../lib/mobile-attachments";
+import { pickMobileCopy, type MobileCopyLocale } from "../lib/mobile-copy";
 import { loadProtectedResourceDataUrl, type ProtectedResourceLoadFailure } from "../lib/mobile-protected-resources";
 import { safeDomCall } from "../lib/safe-dom-call";
 
@@ -20,7 +21,7 @@ type Options = {
   editorRef: MutableRefObject<LocalTiptapEditorRef | null>;
   onLoadFailure: (failure: ProtectedResourceLoadFailure) => void;
   onSelect: (target: MobileResourceTarget) => void;
-  resolvedLocale: string;
+  resolvedLocale: MobileCopyLocale;
   resourceCacheRef: MutableRefObject<Map<string, Promise<string | null>>>;
   sessionBaseUrl?: string;
   token?: string;
@@ -38,8 +39,8 @@ export const useMobileEditorResourceActions = ({
   sessionBaseUrl,
   token,
 }: Options) => {
-  const unavailable = useCallback((english: string, chinese: string) =>
-    new Error(resolvedLocale !== "zh-CN" ? english : chinese), [resolvedLocale]);
+  const unavailable = useCallback((copy: { zh: string; en: string; pl: string }) =>
+    new Error(pickMobileCopy(resolvedLocale, copy)), [resolvedLocale]);
 
   const loadEditorResource = useCallback((source: string) => {
     if (!client) return Promise.resolve(null);
@@ -53,24 +54,24 @@ export const useMobileEditorResourceActions = ({
   }, [baseUrl, client, onLoadFailure, resourceCacheRef, sessionBaseUrl, token]);
 
   const downloadResource = useCallback(async (target: MobileResourceTarget) => {
-    if (!client) throw unavailable("The attachment client is unavailable.", "当前无法读取附件。");
+    if (!client) throw unavailable({ zh: "当前无法读取附件。", en: "The attachment client is unavailable.", pl: "Nie można teraz odczytać załącznika." });
     await openMobileResource(client, target, { baseUrl: sessionBaseUrl ?? baseUrl, token });
   }, [baseUrl, client, sessionBaseUrl, token, unavailable]);
 
   const saveResourceAs = useCallback(async (target: MobileResourceTarget) => {
-    if (!client) throw unavailable("The resource client is unavailable.", "当前无法读取资源。");
+    if (!client) throw unavailable({ zh: "当前无法读取资源。", en: "The resource client is unavailable.", pl: "Nie można teraz odczytać zasobu." });
     const result = await saveMobileResourceAs(client, target, { baseUrl: sessionBaseUrl ?? baseUrl, token });
     if (result.kind === "saf") {
       Alert.alert(
-        resolvedLocale !== "zh-CN" ? "Downloaded" : "下载成功",
-        resolvedLocale !== "zh-CN" ? `Saved ${result.filename}` : `已保存：${result.filename}`,
+        pickMobileCopy(resolvedLocale, { zh: "下载成功", en: "Downloaded", pl: "Pobrano" }),
+        pickMobileCopy(resolvedLocale, { zh: `已保存：${result.filename}`, en: `Saved ${result.filename}`, pl: `Zapisano: ${result.filename}` }),
       );
     }
   }, [baseUrl, client, resolvedLocale, sessionBaseUrl, token, unavailable]);
 
   const requireMutableClient = useCallback(() => {
     if (!client || !canMutate()) {
-      throw unavailable("Wait for this note to sync first.", "请等待笔记同步完成。");
+      throw unavailable({ zh: "请等待笔记同步完成。", en: "Wait for this note to sync first.", pl: "Poczekaj, aż notatka się zsynchronizuje." });
     }
     return client;
   }, [canMutate, client, unavailable]);

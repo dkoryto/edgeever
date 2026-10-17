@@ -15,6 +15,15 @@ describe("mobile login error messages", () => {
     expect(formatMobileLoginError(error, "en-US")).toContain("A Cloudflare browser challenge intercepted the login API");
   });
 
+  test("returns Polish copy instead of falling back to English", () => {
+    expect(formatMobileLoginError(new ApiRequestError("Unauthorized", 401), "pl"))
+      .toContain("Nieprawidłowa nazwa użytkownika lub hasło.");
+    expect(formatMobileLoginError(new TypeError("Failed to fetch"), "pl"))
+      .toContain("Nie można połączyć się z instancją.");
+    expect(formatMobileLoginError(new ApiRequestError("Unauthorized", 401), "ja"))
+      .toContain("The username or password is incorrect.");
+  });
+
   test("distinguishes credentials, edge security blocks, and EdgeEver 403 responses", () => {
     expect(formatMobileLoginError(new ApiRequestError("Unauthorized", 401), "zh-CN"))
       .toContain("用户名或密码不正确");

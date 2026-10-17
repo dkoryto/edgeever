@@ -251,6 +251,11 @@ const mobileOnlyTranslations = new Map<string, string>([
   ["无法保存剪藏", "Unable to save clip"],
   ["剪藏失败", "Could not clip the page"],
   ["无法读取分享的网页，请稍后重试。", "Could not read the shared page. Try again later."],
+  ["编辑笔记标题：{{title}}", "Edit note title: {{title}}"],
+  ["新建标签 {{name}}", "Create tag {{name}}"],
+  ["标签 {{name}}", "Tag {{name}}"],
+  ["{{label}}，发现新版本", "{{label}}, update available"],
+  ["附件读取不完整，请重新选择文件", "The attachment could not be read completely. Choose the file again."],
 ]);
 
 const mobileOnlyJapanese = new Map<string, string>([
@@ -485,6 +490,11 @@ const mobileOnlyJapanese = new Map<string, string>([
   ["无法保存剪藏", "クリップを保存できませんでした"],
   ["剪藏失败", "ページを取り込めませんでした"],
   ["无法读取分享的网页，请稍后重试。", "共有されたページを読み取れませんでした。しばらくしてから再試行してください。"],
+  ["编辑笔记标题：{{title}}", "ノートのタイトルを編集: {{title}}"],
+  ["新建标签 {{name}}", "タグ {{name}} を作成"],
+  ["标签 {{name}}", "タグ {{name}}"],
+  ["{{label}}，发现新版本", "{{label}}、アップデートがあります"],
+  ["附件读取不完整，请重新选择文件", "添付ファイルを最後まで読み込めませんでした。ファイルを選び直してください。"],
 ]);
 
 const mobileOnlyPolish = new Map<string, string>([
@@ -719,6 +729,11 @@ const mobileOnlyPolish = new Map<string, string>([
   ["无法保存剪藏", "Nie można zapisać wycinka"],
   ["剪藏失败", "Nie udało się zapisać strony"],
   ["无法读取分享的网页，请稍后重试。", "Nie udało się odczytać udostępnionej strony. Spróbuj ponownie później."],
+  ["编辑笔记标题：{{title}}", "Edytuj tytuł notatki: {{title}}"],
+  ["新建标签 {{name}}", "Utwórz tag {{name}}"],
+  ["标签 {{name}}", "Tag {{name}}"],
+  ["{{label}}，发现新版本", "{{label}}, dostępna aktualizacja"],
+  ["附件读取不完整，请重新选择文件", "Nie udało się odczytać całego załącznika. Wybierz plik ponownie."],
 ]);
 
 const flattenStrings = (value: unknown, prefix = "", output = new Map<string, string>()) => {

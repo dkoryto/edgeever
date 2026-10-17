@@ -22,6 +22,7 @@ import { ApiRequestError } from "@edgeever/client";
 import { DEFAULT_MEMO_TITLE, getNotebookScopeIds, hasDiagramDocumentMarker, markdownToDoc, type MemoDetail, type MemoSummary, type Notebook } from "@edgeever/shared";
 import { MOBILE_UI_METRICS } from "@edgeever/shared/mobile-ui";
 import { clearMobileMemoDraft, readMobileMemoDraft, type MobileMemoDraft } from "../lib/mobile-drafts";
+import { pickMobileCopy } from "../lib/mobile-copy";
 import {
   readMobileImageCompressionEnabled,
   readMobileShowDescendantNotes,
@@ -471,10 +472,12 @@ export const WorkspaceScreen = ({
   const openRichEditor = useCallback((memo: MemoDetail, initialFocus: "body" | "title" = "body") => {
     if (hasDiagramDocumentMarker(memo.contentMarkdown)) {
       Alert.alert(
-        resolvedLocale !== "zh-CN" ? "View-only diagram" : "图表暂为只读",
-        resolvedLocale !== "zh-CN"
-          ? "Visual diagram editing is currently available on Web and desktop."
-          : "可视化图表目前请在 Web 或桌面端编辑。"
+        pickMobileCopy(resolvedLocale, { zh: "图表暂为只读", en: "View-only diagram", pl: "Diagram tylko do odczytu" }),
+        pickMobileCopy(resolvedLocale, {
+          zh: "可视化图表目前请在 Web 或桌面端编辑。",
+          en: "Visual diagram editing is currently available on Web and desktop.",
+          pl: "Diagramy wizualne można obecnie edytować w wersji Web i desktopowej.",
+        })
       );
       return;
     }
@@ -1093,7 +1096,7 @@ export const WorkspaceScreen = ({
       memo.contentJson,
       target,
       resource.filename || filename,
-      resolvedLocale !== "zh-CN" ? "Attachment: " : "附件："
+      pickMobileCopy(resolvedLocale, { zh: "附件：", en: "Attachment: ", pl: "Załącznik: " })
     );
     await localUpdateMemoMutation.mutateAsync({
       memo,

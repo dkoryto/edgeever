@@ -7,6 +7,7 @@ import { Gesture, GestureDetector, MouseButton, PointerType } from "react-native
 import { ActivityIndicator, Check, ChevronDown, ChevronLeft, LayoutTemplate, MoreHorizontal, Plus, RotateCcw, Search, Sparkles, Tag, X } from "../components/icons";
 import { Pressable, Text, TextInput } from "../components/LocalizedText";
 import type { MobileBootstrapProgress } from "../lib/local-mirror";
+import { pickMobileCopy } from "../lib/mobile-copy";
 import { useMobileLocale } from "../lib/mobile-locale";
 import { useMobileTheme } from "../lib/mobile-theme";
 import type { MobileMemoListDensity } from "../lib/preferences";
@@ -445,8 +446,8 @@ const MemoCard = memo(function MemoCard({
   const listTimestamp = getMemoListTimestamp(memo, sortMode);
   const listTimestampLabel = formatMemoPreviewDate(listTimestamp.value, localePreference);
   const listTimestampKind = listTimestamp.field === "createdAt"
-    ? (resolvedLocale !== "zh-CN" ? "Created" : "创建")
-    : (resolvedLocale !== "zh-CN" ? "Updated" : "更新");
+    ? pickMobileCopy(resolvedLocale, { zh: "创建", en: "Created", pl: "Utworzono" })
+    : pickMobileCopy(resolvedLocale, { zh: "更新", en: "Updated", pl: "Zaktualizowano" });
   const handledLongPressRef = useRef(false);
   const rightClickGesture = Gesture.Tap()
     .mouseButton(MouseButton.RIGHT)
@@ -477,7 +478,7 @@ const MemoCard = memo(function MemoCard({
           </Pressable>
         ) : null}
         <Pressable
-          accessibilityHint={selectionMode ? undefined : (resolvedLocale !== "zh-CN" ? "Long press to select this note" : "长按选择这条笔记")}
+          accessibilityHint={selectionMode ? undefined : pickMobileCopy(resolvedLocale, { zh: "长按选择这条笔记", en: "Long press to select this note", pl: "Przytrzymaj, aby zaznaczyć tę notatkę" })}
           accessibilityLabel={memoTitle}
           accessibilityRole="button"
           delayLongPress={520}

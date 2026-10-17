@@ -7,6 +7,7 @@ import {
   type MobileAttachmentTarget,
   type MobileResourceTarget,
 } from "../lib/mobile-attachments";
+import { pickMobileCopy } from "../lib/mobile-copy";
 import { useMobileLocale } from "../lib/mobile-locale";
 import { useMobileTheme } from "../lib/mobile-theme";
 
@@ -127,7 +128,7 @@ export const MobileAttachmentCard = ({
   return (
     <View style={[styles.card, dark && styles.cardDark]}>
       <Pressable
-        accessibilityHint={resolvedLocale !== "zh-CN" ? "Opens the system share sheet for this attachment" : "打开系统分享面板分享此附件"}
+        accessibilityHint={pickMobileCopy(resolvedLocale, { zh: "打开系统分享面板分享此附件", en: "Opens the system share sheet for this attachment", pl: "Otwiera systemowy panel udostępniania dla tego załącznika" })}
         accessibilityLabel={target.filename}
         accessibilityRole="button"
         disabled={busy}
@@ -150,7 +151,7 @@ export const MobileAttachmentCard = ({
         </View>
       </Pressable>
       <Pressable
-        accessibilityLabel={resolvedLocale !== "zh-CN" ? "Attachment actions" : "附件操作"}
+        accessibilityLabel={pickMobileCopy(resolvedLocale, { zh: "附件操作", en: "Attachment actions", pl: "Działania na załączniku" })}
         accessibilityRole="button"
         disabled={busy}
         onPress={onActions}

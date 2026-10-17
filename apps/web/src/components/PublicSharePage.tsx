@@ -24,6 +24,7 @@ import {
   resolveNoteProse,
   type PublicMemoShare,
   type ShareBodyAccess,
+  getMemoDisplayTitle,
 } from "@edgeever/shared";
 import { applyEditorBodyFontPreference } from "@/lib/editor-body-font";
 import { createEdgeEverMathematics } from "@edgeever/shared/mathematics";
@@ -239,7 +240,7 @@ export const PublicSharePage = () => {
     document.head.appendChild(robots);
     if (share) {
       document.title = withEnvironmentTitlePrefix(
-        `${share.title?.trim() || t("common.untitledMemo")} · EdgeEver`,
+        `${getMemoDisplayTitle(share.title, t("common.untitledMemo"))} · EdgeEver`,
         { development: import.meta.env.DEV, profile: __EDGEEVER_DEVELOPMENT_PROFILE__ },
       );
     } else if (passwordRequired) {
@@ -364,7 +365,7 @@ export const PublicShareArticle = ({
               layout === "site" && "order-1",
             )}
           >
-            {share.title?.trim() || t("common.untitledMemo")}
+            {getMemoDisplayTitle(share.title, t("common.untitledMemo"))}
           </h1>
           {share.tags.length > 0 ? (
             <div

@@ -101,6 +101,48 @@ describe("production authentication guard", () => {
     });
   });
 
+  test("keeps Cloudflare health free of image build metadata", async () => {
+    const response = await fetchApi("/api/health", {
+      DB: createDatabase({ userId: "owner" }),
+      RESOURCES: {},
+      EDGE_EVER_AUTH_PASSWORD: "configured-secret",
+      EDGE_EVER_BUILD_CREATED_AT: "2026-01-02T03:04:05Z",
+      EDGE_EVER_BUILD_TRIGGER: "main_push",
+      EDGE_EVER_BUILD_METHOD: "github_actions",
+    });
+
+    expect(response.status).toBe(200);
+    const health = await response.json() as Record<string, unknown>;
+    expect(health).not.toHaveProperty("buildCreatedAt");
+    expect(health).not.toHaveProperty("buildProvenance");
+    expect(health).not.toHaveProperty("containerImageSource");
+    expect(health.deploymentVersionCreatedAt).toBeNull();
+  });
+
+  test("reports self-hosted image build metadata separately from deployment metadata", async () => {
+    const response = await fetchApi("/api/health", {
+      DB: createDatabase({ userId: "owner" }),
+      RESOURCES: {},
+      EDGE_EVER_AUTH_PASSWORD: "configured-secret",
+      EDGE_EVER_RUNTIME: "self-hosted-bun",
+      EDGE_EVER_BUILD_CREATED_AT: "2026-01-02T03:04:05Z",
+      EDGE_EVER_BUILD_TRIGGER: "github_release",
+      EDGE_EVER_BUILD_METHOD: "github_actions",
+      EDGE_EVER_DEPLOYMENT_TRIGGER: "manual",
+      EDGE_EVER_DEPLOYMENT_METHOD: "docker",
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      runtime: "self-hosted-bun",
+      containerImageSource: "unknown",
+      buildCreatedAt: "2026-01-02T03:04:05.000Z",
+      buildProvenance: { trigger: "github_release", method: "github_actions" },
+      deployment: { trigger: "manual", method: "docker" },
+      deploymentVersionCreatedAt: null,
+    });
+  });
+
   test("does not misreport transient D1 failures as unapplied migrations", async () => {
     const response = await fetchApi("/api/health", {
       DB: createDatabase({ error: new Error("D1_ERROR: Network connection lost.") }),

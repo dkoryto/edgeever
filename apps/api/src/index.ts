@@ -46,7 +46,7 @@ import {
 } from "./backup-service";
 import { sha256, sha256Bytes } from "./hash-utils";
 import { INSTANCE_BUILD_ID } from "./instance-build";
-import { resolveDeploymentVersionCreatedAt, resolveInstanceDeploymentMetadata } from "./instance-deployment";
+import { resolveDeploymentVersionCreatedAt, resolveImageBuildMetadata, resolveInstanceDeploymentMetadata } from "./instance-deployment";
 import type {
   DatabaseAdapter,
   PreparedStatementAdapter,
@@ -225,7 +225,10 @@ app.get("/api/health", async (c) => {
     name: "edgeever",
     runtime,
     ...(runtime === "self-hosted-bun"
-      ? { containerImageSource: resolveContainerImageSource(c.env.EDGE_EVER_CONTAINER_IMAGE) }
+      ? {
+          containerImageSource: resolveContainerImageSource(c.env.EDGE_EVER_CONTAINER_IMAGE),
+          ...resolveImageBuildMetadata(c.env),
+        }
       : {}),
     authMode,
     build: INSTANCE_BUILD_ID.slice(0, 12),

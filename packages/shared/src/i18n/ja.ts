@@ -1864,6 +1864,8 @@ export const ja = {
       unknown: "不明",
     },
     containerImageSource: "コンテナイメージの出典",
+    imageBuiltAt: "イメージのビルド時刻",
+    imageBuildSource: "イメージのビルド元",
     containerImageSources: {
       "official-ghcr": "GitHub Container Registry (GHCR)",
       "official-cn-mirror": "中国本土向け公式ミラー",
@@ -1881,6 +1883,7 @@ export const ja = {
       github_actions: "GitHub Actions 経由",
       cloudflare_workers_builds: "Cloudflare Workers Builds 経由",
       local_cli: "ローカル CLI 経由",
+      docker: "Docker 経由",
       unknown: "不明な方法",
     },
     browser: "ブラウザ",

@@ -1864,6 +1864,8 @@ export const pl = {
       unknown: "Nieznana",
     },
     containerImageSource: "Źródło obrazu kontenera",
+    imageBuiltAt: "Czas zbudowania obrazu",
+    imageBuildSource: "Źródło budowy obrazu",
     containerImageSources: {
       "official-ghcr": "GitHub Container Registry (GHCR)",
       "official-cn-mirror": "Oficjalny mirror dla Chin kontynentalnych",
@@ -1881,6 +1883,7 @@ export const pl = {
       github_actions: "przez GitHub Actions",
       cloudflare_workers_builds: "przez Cloudflare Workers Builds",
       local_cli: "przez lokalne CLI",
+      docker: "przez Docker",
       unknown: "Nieznana metoda",
     },
     browser: "Przeglądarka",

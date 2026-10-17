@@ -1875,6 +1875,8 @@ export const zhCN = {
       unknown: "未知",
     },
     containerImageSource: "容器镜像来源",
+    imageBuiltAt: "镜像构建时间",
+    imageBuildSource: "镜像构建来源",
     containerImageSources: {
       "official-ghcr": "GitHub Container Registry（GHCR）",
       "official-cn-mirror": "中国大陆官方镜像",
@@ -1892,6 +1894,7 @@ export const zhCN = {
       github_actions: "GitHub Actions 执行",
       cloudflare_workers_builds: "Cloudflare Workers Builds 执行",
       local_cli: "本地命令执行",
+      docker: "Docker 部署",
       unknown: "执行方式未知",
     },
     browser: "浏览器",

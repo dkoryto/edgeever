@@ -1875,6 +1875,8 @@ export const enUS = {
       unknown: "Unknown",
     },
     containerImageSource: "Container image source",
+    imageBuiltAt: "Image built at",
+    imageBuildSource: "Image build source",
     containerImageSources: {
       "official-ghcr": "GitHub Container Registry (GHCR)",
       "official-cn-mirror": "Official mainland China mirror",
@@ -1892,6 +1894,7 @@ export const enUS = {
       github_actions: "via GitHub Actions",
       cloudflare_workers_builds: "via Cloudflare Workers Builds",
       local_cli: "via local CLI",
+      docker: "via Docker",
       unknown: "Unknown method",
     },
     browser: "Browser",

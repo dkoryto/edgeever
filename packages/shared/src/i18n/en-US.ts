@@ -2618,6 +2618,10 @@ export const enUS = {
     expandOutlineHeading: "Expand {{name}}",
   },
   sharing: {
+    qrCode: "QR code",
+    qrCodeLabel: "QR code for the share link",
+    qrCodeHint: "Scan with a phone camera to open this note.",
+    qrCodeNotebookHint: "Scan with a phone camera to open this notebook.",
     siteHideContents: "Hide contents",
     siteShowContents: "Show contents",
     siteHome: "Home",

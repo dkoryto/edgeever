@@ -2607,6 +2607,10 @@ export const pl = {
     expandOutlineHeading: "Rozwiń {{name}}",
   },
   sharing: {
+    qrCode: "Kod QR",
+    qrCodeLabel: "Kod QR linku udostępniania",
+    qrCodeHint: "Zeskanuj aparatem telefonu, aby otworzyć tę notatkę.",
+    qrCodeNotebookHint: "Zeskanuj aparatem telefonu, aby otworzyć ten notes.",
     siteHideContents: "Ukryj spis treści",
     siteShowContents: "Pokaż spis treści",
     siteHome: "Strona główna",

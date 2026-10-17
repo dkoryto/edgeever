@@ -7,8 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BackHandler, Dimensions, Linking, Modal, PixelRatio, Platform, ScrollView, Switch, View } from "react-native";
 import { Activity, ActivityIndicator, Check, ChevronDown, ChevronLeft, ChevronRight, Cloud, Copy, ExternalLink, Image as ImageIcon, Info, LogOut, MessageSquare, MonitorSmartphone, Moon, RefreshCw, ShieldCheck, SlidersHorizontal, Sun, UserRound } from "../components/icons";
 import { Pressable, Text } from "../components/LocalizedText";
-import { pickMobileCopy, type MobileCopyLocale } from "../lib/mobile-copy";
-import { useMobileLocale } from "../lib/mobile-locale";
+import { useMobileLocale, getMobileCatalog, type MobileLocale } from "../lib/mobile-locale";
 import { useMobileTheme } from "../lib/mobile-theme";
 import { useMobileUpdate } from "../lib/mobile-update";
 import type { MobileLocalePreference } from "../lib/preferences";
@@ -39,11 +38,11 @@ const formatExecutionEnvironment = (environment: string | null | undefined, loca
 
   switch (environment) {
     case "standalone":
-      return pickMobileCopy(locale, { zh: "独立安装包", en: "Standalone app", pl: "Samodzielna aplikacja" });
+      return getMobileCatalog(locale).mobile.settings.standaloneApp;
     case "storeClient":
-      return pickMobileCopy(locale, { zh: "Expo Go / 开发客户端", en: "Expo Go / development client", pl: "Expo Go / klient deweloperski" });
+      return getMobileCatalog(locale).mobile.settings.expoGo;
     case "bare":
-      return pickMobileCopy(locale, { zh: "原生应用", en: "Native app", pl: "Aplikacja natywna" });
+      return getMobileCatalog(locale).mobile.settings.nativeApp;
     default:
       return environment || getMobileSystemInfoText(localePreference).unknown;
   }
@@ -419,14 +418,14 @@ const SystemInfoCard = ({
   const checking = status === "checking";
   const downloading = status === "downloading";
   const checkLabel = checking
-    ? pickMobileCopy(locale, { zh: "正在检查…", en: "Checking…", pl: "Sprawdzanie…" })
-    : pickMobileCopy(locale, { zh: "检查更新", en: "Check for updates", pl: "Sprawdź aktualizacje" });
+    ? getMobileCatalog(locale).mobile.update.checking
+    : getMobileCatalog(locale).mobile.update.checkForUpdates;
   const openUpdateLabel = downloading
-    ? pickMobileCopy(locale, { zh: "正在下载…", en: "Downloading…", pl: "Pobieranie…" })
+    ? getMobileCatalog(locale).mobile.update.downloading
     : status === "ready"
-      ? pickMobileCopy(locale, { zh: "重启以应用", en: "Restart to apply", pl: "Uruchom ponownie, aby zastosować" })
+      ? getMobileCatalog(locale).mobile.update.restartToApply
       : updateKind === "ota"
-        ? pickMobileCopy(locale, { zh: "下载更新", en: "Download update", pl: "Pobierz aktualizację" })
+        ? getMobileCatalog(locale).mobile.update.downloadUpdate
         : copy.openUpdate;
 
   const copySystemInfo = async () => {
@@ -452,7 +451,7 @@ const SystemInfoCard = ({
       </Pressable>
       {expanded ? (
         <View style={styles.settingsAccordionContent}>
-          <SettingsActionButton label={copied ? pickMobileCopy(locale, { zh: "已复制", en: "Copied", pl: "Skopiowano" }) : pickMobileCopy(locale, { zh: "复制信息", en: "Copy info", pl: "Kopiuj informacje" })} onPress={copySystemInfo}>
+          <SettingsActionButton label={copied ? getMobileCatalog(locale).common.copied : getMobileCatalog(locale).systemInfo.copy} onPress={copySystemInfo}>
             {copied ? <ShieldCheck color="#047857" size={16} /> : <Copy color="#0f172a" size={16} />}
           </SettingsActionButton>
           {hasUpdate ? (
@@ -520,160 +519,46 @@ const MobileSystemInfoSection = ({ group }: { group: MobileSystemInfoGroup }) =>
 
 
 const getMobileSystemInfoText = (localePreference: MobileLocaleMode) => {
-  const locale = getResolvedMobileLocale(localePreference);
-  if (locale === "zh-CN") {
-    return {
-      build: "构建类型",
-      developmentBuild: "开发版",
-      productionBuild: "正式版",
-      client: "客户端",
-      clientAheadOfInstanceCloudflare: "当前客户端版本高于云端实例。可等待每天自动更新，或手动运行 Update deployed EdgeEver 工作流。",
-      clientAheadOfInstanceDocker: "当前客户端版本高于云端实例。可等待每天自动更新，或在安装目录执行 ./update.sh（默认 ~/edgeever）。",
-      clientAheadOfInstanceUnknown: "当前客户端版本高于云端实例。可等待每天自动更新，也可手动更新实例。",
-      clientDescription: "这台设备上的 EdgeEver 应用与运行环境。",
-      clientSection: "当前客户端",
-      cloudDescription: "当前连接实例的版本与部署环境。",
-      cloudSection: "云端实例",
-      connected: "连接正常",
-      connectionChecking: "正在检查",
-      connectionDescription: "实例连接与本地同步队列状态。",
-      connectionFailed: "连接失败",
-      connectionSection: "连接与同步",
-      containerImageSource: "容器镜像来源",
-      databaseBackend: "数据库后端",
-      databaseVersion: "数据库版本",
-      description: "查看云端实例与当前客户端的诊断信息。",
-      deploymentPlatform: "部署平台",
-      existingAttachments: "已有附件",
-      existingAttachmentsOriginalStorage: "继续从原存储读取",
-      failedSync: "失败或冲突",
-      followSystem: "跟随系统",
-      installMode: "安装形态",
-      instanceBuild: "实例构建",
-      deploymentVersionTime: "实例部署时间",
-      instanceConnection: "实例连接",
-      instanceUrl: "实例地址",
-      instanceVersion: "实例版本",
-      language: "语言",
-      newUploadObjectStorage: "新上传对象存储",
-      pendingSync: "待同步",
-      platform: "系统",
-      mobileApp: "移动应用",
-      platformVersion: "系统版本",
-      requestLatency: "健康检查耗时",
-      deviceModel: "设备型号",
-      screenResolution: "屏幕分辨率",
-      screenResolutionValue: "{{screen}} @{{dpr}}x",
-      timeZone: "时区",
-      openUpdate: "前往更新",
-      title: "系统信息",
-      unknown: "未知",
-      updateAvailableDescription: "发现新版本，点按查看详情。",
-      updateAvailableTitle: "发现新版本",
-      version: "版本",
-    };
-  }
-  if (locale === "pl") {
-    return {
-      build: "Typ kompilacji",
-      developmentBuild: "Deweloperska",
-      productionBuild: "Produkcyjna",
-      client: "Klient",
-      clientAheadOfInstanceCloudflare: "Ten klient jest nowszy niż połączona instancja w chmurze. Możesz poczekać na codzienną automatyczną aktualizację instancji lub uruchomić workflow Update deployed EdgeEver.",
-      clientAheadOfInstanceDocker: "Ten klient jest nowszy niż połączona instancja w chmurze. Możesz poczekać na codzienną automatyczną aktualizację instancji lub uruchomić ./update.sh w katalogu instalacji (domyślnie ~/edgeever).",
-      clientAheadOfInstanceUnknown: "Ten klient jest nowszy niż połączona instancja w chmurze. Możesz poczekać na codzienną automatyczną aktualizację instancji lub zaktualizować ją ręcznie.",
-      clientDescription: "Aplikacja EdgeEver i środowisko uruchomieniowe na tym urządzeniu.",
-      clientSection: "Bieżący klient",
-      cloudDescription: "Wersja i środowisko wdrożenia połączonej instancji.",
-      cloudSection: "Instancja w chmurze",
-      connected: "Połączono",
-      connectionChecking: "Sprawdzanie",
-      connectionDescription: "Stan połączenia z instancją i lokalnej kolejki synchronizacji.",
-      connectionFailed: "Błąd połączenia",
-      connectionSection: "Połączenie i synchronizacja",
-      containerImageSource: "Źródło obrazu kontenera",
-      databaseBackend: "Backend bazy danych",
-      databaseVersion: "Wersja bazy danych",
-      description: "Wyświetl diagnostykę instancji w chmurze i bieżącego klienta.",
-      deploymentPlatform: "Platforma wdrożenia",
-      existingAttachments: "Istniejące załączniki",
-      existingAttachmentsOriginalStorage: "Odczyt z pierwotnego magazynu",
-      failedSync: "Nieudane lub w konflikcie",
-      followSystem: "Zgodnie z systemem",
-      installMode: "Tryb",
-      instanceBuild: "Kompilacja instancji",
-      deploymentVersionTime: "Czas wdrożenia instancji",
-      instanceConnection: "Połączenie z instancją",
-      instanceUrl: "Adres instancji",
-      instanceVersion: "Wersja instancji",
-      language: "Język",
-      newUploadObjectStorage: "Magazyn obiektów dla nowych plików",
-      pendingSync: "Oczekuje na synchronizację",
-      platform: "System",
-      mobileApp: "Aplikacja mobilna",
-      platformVersion: "Wersja systemu",
-      requestLatency: "Czas kontroli stanu",
-      deviceModel: "Model urządzenia",
-      screenResolution: "Rozdzielczość ekranu",
-      screenResolutionValue: "{{screen}} @{{dpr}}x",
-      timeZone: "Strefa czasowa",
-      openUpdate: "Pobierz aktualizację",
-      title: "Informacje o systemie",
-      unknown: "Nieznane",
-      updateAvailableDescription: "Dostępna jest nowa wersja. Stuknij, aby zobaczyć szczegóły.",
-      updateAvailableTitle: "Dostępna aktualizacja",
-      version: "Wersja",
-    };
-  }
+  const { mobile, systemInfo } = getMobileCatalog(getResolvedMobileLocale(localePreference));
   return {
-    build: "Build type",
-    developmentBuild: "Development",
-    productionBuild: "Production",
-    client: "Client",
-    clientAheadOfInstanceCloudflare: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run the Update deployed EdgeEver workflow.",
-    clientAheadOfInstanceDocker: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run ./update.sh in the install directory (default ~/edgeever).",
-    clientAheadOfInstanceUnknown: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or update the instance manually.",
-    clientDescription: "The EdgeEver app and runtime environment on this device.",
-    clientSection: "Current client",
-    cloudDescription: "Version and deployment environment for the connected instance.",
-    cloudSection: "Cloud instance",
-    connected: "Connected",
-    connectionChecking: "Checking",
-    connectionDescription: "Connection and local sync queue status.",
-    connectionFailed: "Connection failed",
-    connectionSection: "Connection and sync",
-    containerImageSource: "Container image source",
-    databaseBackend: "Database backend",
-    databaseVersion: "Database version",
-    description: "View cloud instance and current client diagnostics.",
-    deploymentPlatform: "Deployment platform",
-    existingAttachments: "Existing attachments",
-    existingAttachmentsOriginalStorage: "Read from original storage",
-    failedSync: "Failed or conflicted",
-    followSystem: "Follow system",
-    installMode: "Mode",
-    instanceBuild: "Instance build",
-    deploymentVersionTime: "Instance deployment time",
-    instanceConnection: "Instance connection",
-    instanceUrl: "Instance URL",
-    instanceVersion: "Instance version",
-    language: "Language",
-    newUploadObjectStorage: "New upload object storage",
-    pendingSync: "Pending sync",
-    platform: "System",
-    mobileApp: "Mobile app",
-    platformVersion: "System version",
-    requestLatency: "Health check time",
-    deviceModel: "Device model",
-    screenResolution: "Screen resolution",
-    screenResolutionValue: "{{screen}} @{{dpr}}x",
-    timeZone: "Time zone",
-    openUpdate: "Get update",
-    title: "System info",
-    unknown: "Unknown",
-    updateAvailableDescription: "A new version is available. Tap for details.",
-    updateAvailableTitle: "Update available",
-    version: "Version",
+    ...mobile.systemInfo,
+    client: systemInfo.client,
+    clientAheadOfInstanceCloudflare: systemInfo.clientAheadOfInstanceByPlatform.cloudflare,
+    clientAheadOfInstanceDocker: systemInfo.clientAheadOfInstanceByPlatform.docker,
+    clientAheadOfInstanceUnknown: systemInfo.clientAheadOfInstanceByPlatform.unknown,
+    clientDescription: systemInfo.clientSectionDescription,
+    clientSection: systemInfo.clientSection,
+    cloudDescription: systemInfo.cloudSectionDescription,
+    cloudSection: systemInfo.cloudSection,
+    connected: systemInfo.connectionConnected,
+    connectionChecking: systemInfo.connectionChecking,
+    connectionFailed: systemInfo.connectionFailed,
+    connectionSection: systemInfo.connectionSection,
+    containerImageSource: systemInfo.containerImageSource,
+    databaseBackend: systemInfo.databaseBackend,
+    databaseVersion: systemInfo.databaseMigration,
+    deploymentPlatform: systemInfo.deploymentPlatform,
+    deploymentVersionTime: systemInfo.deploymentVersionTime,
+    deviceModel: systemInfo.deviceModel,
+    existingAttachments: systemInfo.existingAttachments,
+    failedSync: systemInfo.failedSync,
+    installMode: systemInfo.installMode,
+    instanceBuild: systemInfo.instanceBuild,
+    instanceConnection: systemInfo.instanceConnection,
+    instanceUrl: systemInfo.instanceUrl,
+    instanceVersion: systemInfo.instanceVersion,
+    language: systemInfo.language,
+    mobileApp: systemInfo.clients.mobileApp,
+    newUploadObjectStorage: systemInfo.newUploadObjectStorage,
+    pendingSync: systemInfo.pendingSync,
+    platform: systemInfo.os,
+    requestLatency: systemInfo.requestLatency,
+    screenResolution: systemInfo.screenResolution,
+    screenResolutionValue: systemInfo.screenResolutionValue,
+    timeZone: systemInfo.timeZone,
+    title: systemInfo.title,
+    unknown: systemInfo.unknown,
+    version: systemInfo.version,
   };
 };
 
@@ -688,18 +573,18 @@ const getMobileClientAheadNotice = (
   return copy.clientAheadOfInstanceUnknown;
 };
 
-const getMobileDeploymentPlatform = (runtime: string | null | undefined, locale: MobileCopyLocale) => {
+const getMobileDeploymentPlatform = (runtime: string | null | undefined, locale: MobileLocale) => {
   if (runtime === "cloudflare-workers") return "Cloudflare";
   if (runtime === "self-hosted-bun") return "Docker";
-  return pickMobileCopy(locale, { zh: "未知", en: "Unknown", pl: "Nieznane" });
+  return getMobileCatalog(locale).systemInfo.unknown;
 };
 
-const getMobileContainerImageSource = (source: string | null | undefined, locale: MobileCopyLocale) => {
+const getMobileContainerImageSource = (source: string | null | undefined, locale: MobileLocale) => {
   switch (source) {
     case "official-ghcr": return "GitHub Container Registry (GHCR)";
-    case "official-cn-mirror": return pickMobileCopy(locale, { zh: "中国大陆官方镜像", en: "Official mainland China mirror", pl: "Oficjalny mirror dla Chin kontynentalnych" });
-    case "custom": return pickMobileCopy(locale, { zh: "自定义镜像", en: "Custom image", pl: "Własny obraz" });
-    default: return pickMobileCopy(locale, { zh: "未知", en: "Unknown", pl: "Nieznane" });
+    case "official-cn-mirror": return getMobileCatalog(locale).systemInfo.containerImageSources["official-cn-mirror"];
+    case "custom": return getMobileCatalog(locale).systemInfo.containerImageSources.custom;
+    default: return getMobileCatalog(locale).systemInfo.unknown;
   }
 };
 
@@ -709,13 +594,13 @@ const getMobileDatabaseBackend = (backend: string | null | undefined, unknown: s
   return backend || unknown;
 };
 
-const getMobileObjectStorage = (health: InstanceHealth | undefined, locale: MobileCopyLocale, unknown: string) => {
-  if (health?.objectStorageProvider === "s3") return pickMobileCopy(locale, { zh: "第三方 S3 兼容 OSS", en: "Third-party S3-compatible OSS", pl: "Zewnętrzny OSS zgodny z S3" });
+const getMobileObjectStorage = (health: InstanceHealth | undefined, locale: MobileLocale, unknown: string) => {
+  if (health?.objectStorageProvider === "s3") return getMobileCatalog(locale).systemInfo.objectStorageBackends.external_s3;
   if (health?.objectStorageProvider !== "builtin") return unknown;
   switch (health.storage?.resources) {
-    case "r2": return pickMobileCopy(locale, { zh: "内置 R2", en: "Built-in R2", pl: "Wbudowany R2" });
-    case "filesystem": return pickMobileCopy(locale, { zh: "本地文件系统", en: "Local filesystem", pl: "Lokalny system plików" });
-    case "s3": return pickMobileCopy(locale, { zh: "实例内置 S3 兼容存储", en: "Instance-provided S3-compatible storage", pl: "Magazyn zgodny z S3 dostarczany przez instancję" });
+    case "r2": return getMobileCatalog(locale).systemInfo.objectStorageBackends.builtin_r2;
+    case "filesystem": return getMobileCatalog(locale).systemInfo.objectStorageBackends.builtin_filesystem;
+    case "s3": return getMobileCatalog(locale).systemInfo.objectStorageBackends.builtin_s3;
     default: return unknown;
   }
 };

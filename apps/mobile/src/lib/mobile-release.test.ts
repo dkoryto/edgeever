@@ -77,12 +77,10 @@ test("offers Google Play and the latest GitHub Release as manual update destinat
       applicationId: ANDROID_APPLICATION_ID,
       fallbackUrl: GOOGLE_PLAY_WEB_URL,
       id: "google-play",
-      label: { zh: "在 Google Play 更新", en: "Update on Google Play", pl: "Zaktualizuj w Google Play" },
       url: GOOGLE_PLAY_APP_URL,
     },
     {
       id: "github",
-      label: { zh: "从 GitHub 下载", en: "Download from GitHub", pl: "Pobierz z GitHub" },
       url: GITHUB_LATEST_RELEASE_URL,
     },
   ]);

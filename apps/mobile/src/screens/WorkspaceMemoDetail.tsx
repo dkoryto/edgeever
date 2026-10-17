@@ -25,7 +25,6 @@ import { MobileAiAssistantModal } from "../components/MobileAiAssistantModal";
 import { MobileResourceActions } from "../components/MobileResourceActions";
 import { ZoomableImagePreview } from "../components/ZoomableImagePreview";
 import type { ImageSize } from "../lib/mobile-image-zoom";
-import { pickMobileCopy } from "../lib/mobile-copy";
 import { SAFE_DOM_WEBVIEW_PROPS } from "../lib/mobile-dom";
 import { getNextMobileNoteSearchIndex } from "../lib/mobile-note-search";
 import { hasMobilePoster, hasMobileInfographic, hasMobileStructuredTable, hasMobileVisualDiagram, resolveMobileMemoViewerContent } from "../lib/mobile-diagram";
@@ -37,7 +36,7 @@ import {
   saveMobileResourceAs,
   type MobileResourceTarget,
 } from "../lib/mobile-attachments";
-import { localizeUntitledMemoTitle, useMobileLocale } from "../lib/mobile-locale";
+import { localizeUntitledMemoTitle, useMobileLocale, getMobileCatalog, formatMobileCopy, type MobileCatalog } from "../lib/mobile-locale";
 import {
   createOnceProtectedResourceFailureNotifier,
   isProtectedResourceSource,
@@ -163,14 +162,10 @@ const alertProtectedImageLoadFailure = (
   locale: "zh-CN" | "en-US" | "ja" | "pl",
   failure: ProtectedResourceLoadFailure
 ) => {
-  const statusLabel = failure.status != null ? String(failure.status) : pickMobileCopy(locale, { zh: "网络错误", en: "network error", pl: "błąd sieci" });
+  const statusLabel = failure.status != null ? String(failure.status) : getMobileCatalog(locale).mobile.common.networkError;
   Alert.alert(
-    pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" }),
-    pickMobileCopy(locale, {
-      zh: `笔记中的图片未能加载（${statusLabel}）。请检查网络后重试。`,
-      en: `Could not load a note image (${statusLabel}). Check the network and try again.`,
-      pl: `Nie udało się wczytać obrazu z notatki (${statusLabel}). Sprawdź połączenie i spróbuj ponownie.`,
-    })
+    getMobileCatalog(locale).mobile.common.imageLoadFailed,
+    formatMobileCopy(getMobileCatalog(locale).mobile.common.noteImageLoadFailed, { status: statusLabel })
   );
 };
 
@@ -220,30 +215,15 @@ const loadAuthenticatedSvg = (source: AuthenticatedImageSource) => {
   return pending;
 };
 
-const MOBILE_THEME_LABELS = {
-  "gradient": { labelZh: "默认", labelEn: "Classic", labelPl: "Klasyczny" },
-  "glass": { labelZh: "透明", labelEn: "Glass", labelPl: "Szkło" },
-  "quote": { labelZh: "金句", labelEn: "Quote", labelPl: "Cytat" },
-  "book": { labelZh: "书摘", labelEn: "Book excerpt", labelPl: "Fragment książki" },
-  "memo": { labelZh: "备忘录", labelEn: "Memo", labelPl: "Notatka" },
-  "bento": { labelZh: "便当", labelEn: "Bento", labelPl: "Bento" },
-  "black-sun": { labelZh: "黑日", labelEn: "Black Sun", labelPl: "Czarne słońce" },
-  "frame": { labelZh: "框界", labelEn: "Frame", labelPl: "Ramka" },
-  "handwritten": { labelZh: "手写", labelEn: "Handwritten", labelPl: "Odręczny" },
-  "code": { labelZh: "代码", labelEn: "Code", labelPl: "Kod" },
-};
-
 const MOBILE_THEME_OPTIONS = NOTE_IMAGE_THEME_OPTIONS.map((id) => ({
-  id, ...MOBILE_THEME_LABELS[id], previewBg: NOTE_IMAGE_BACKGROUND_COLORS[id],
+  id, previewBg: NOTE_IMAGE_BACKGROUND_COLORS[id],
 }));
 
-const MOBILE_FONT_OPTIONS: Array<{ id: NoteImageFontStyle; labelZh: string; labelEn: string; labelPl: string }> = [
-  { id: "auto", labelZh: "跟随主题", labelEn: "Follow Theme", labelPl: "Zgodnie z motywem" },
-  { id: "kai", labelZh: "文楷手书", labelEn: "Handwritten Kai", labelPl: "Odręczny Kai" },
-  { id: "serif", labelZh: "文艺衬线", labelEn: "Serif", labelPl: "Szeryfowy" },
-  { id: "sans", labelZh: "现代无衬线", labelEn: "Sans", labelPl: "Bezszeryfowy" },
-  { id: "mono", labelZh: "极客等宽", labelEn: "Mono", labelPl: "Monospace" },
-  ...FONT_IDS.map(id => ({ id, labelZh: FONT_CATALOG[id].zh, labelEn: FONT_CATALOG[id].en, labelPl: FONT_CATALOG[id].en })),
+type MobileFontStyleLabelKey = keyof MobileCatalog["editor"]["imageShare"]["fontStyles"];
+
+const MOBILE_FONT_OPTIONS: Array<{ id: NoteImageFontStyle; labelKey: MobileFontStyleLabelKey }> = [
+  ...(["auto", "kai", "serif", "sans", "mono"] as const).map((id) => ({ id, labelKey: id })),
+  ...FONT_IDS.map((id) => ({ id, labelKey: FONT_CATALOG[id].labelKey.split(".").pop() as MobileFontStyleLabelKey })),
 ];
 
 const AuthenticatedResourceImage = ({
@@ -608,13 +588,13 @@ export const MemoDetailModal = ({
   });
 
   const downloadResource = useCallback(async (target: MobileResourceTarget) => {
-    if (!client) throw new Error(pickMobileCopy(resolvedLocale, { zh: "当前无法读取资源。", en: "The resource client is unavailable.", pl: "Nie można teraz odczytać zasobu." }));
+    if (!client) throw new Error(getMobileCatalog(resolvedLocale).mobile.common.resourceUnavailable);
     try {
       await openMobileResource(client, target, { baseUrl, token: session?.token });
     } catch (error) {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "无法打开资源", en: "Unable to open resource", pl: "Nie można otworzyć zasobu" }),
-        error instanceof Error ? error.message : pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Try again later.", pl: "Spróbuj ponownie później." })
+        getMobileCatalog(resolvedLocale).mobile.memoDetail.openResourceFailed,
+        error instanceof Error ? error.message : getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater
       );
       throw error;
     }
@@ -648,12 +628,12 @@ export const MemoDetailModal = ({
   };
 
   const saveResourceAs = useCallback(async (target: MobileResourceTarget) => {
-    if (!client) throw new Error(pickMobileCopy(resolvedLocale, { zh: "当前无法读取资源。", en: "The resource client is unavailable.", pl: "Nie można teraz odczytać zasobu." }));
+    if (!client) throw new Error(getMobileCatalog(resolvedLocale).mobile.common.resourceUnavailable);
     const result = await saveMobileResourceAs(client, target, { baseUrl, token: session?.token });
     if (result.kind === "saf") {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "下载成功", en: "Downloaded", pl: "Pobrano" }),
-        pickMobileCopy(resolvedLocale, { zh: `已保存：${result.filename}`, en: `Saved ${result.filename}`, pl: `Zapisano: ${result.filename}` })
+        getMobileCatalog(resolvedLocale).mobile.common.downloaded,
+        formatMobileCopy(getMobileCatalog(resolvedLocale).mobile.common.savedFile, { filename: result.filename })
       );
     }
   }, [baseUrl, client, resolvedLocale, session?.token]);
@@ -848,13 +828,13 @@ export const MemoDetailModal = ({
     try {
       await Clipboard.setStringAsync(memo.id);
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "笔记 ID 已复制", en: "Note ID copied", pl: "Skopiowano ID notatki" }),
+        getMobileCatalog(resolvedLocale).mobile.memoDetail.noteIdCopied,
         memo.id
       );
     } catch {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "复制笔记 ID 失败", en: "Could not copy note ID", pl: "Nie udało się skopiować ID notatki" }),
-        pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Please try again.", pl: "Spróbuj ponownie później." })
+        getMobileCatalog(resolvedLocale).mobile.memoDetail.noteIdCopyFailed,
+        getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater
       );
     }
   };
@@ -891,21 +871,13 @@ export const MemoDetailModal = ({
     setIsExportingImage(false);
     if (imageShareFromList) setImageShareOptionsOpen(true);
     const localizedMessage = message === "NOTE_IMAGE_TOO_LONG"
-      ? pickMobileCopy(resolvedLocale, {
-          zh: "这篇笔记太长，无法生成清晰的单张图片。请调小导出字号，或拆分笔记后重试。",
-          en: "This note is too long for one readable image. Choose a smaller font size or split the note.",
-          pl: "Ta notatka jest za długa na jeden czytelny obraz. Wybierz mniejszą czcionkę lub podziel notatkę.",
-        })
+      ? getMobileCatalog(resolvedLocale).mobile.imageShare.tooLong
       : message === "NOTE_IMAGE_RENDER_FAILED"
-        ? pickMobileCopy(resolvedLocale, {
-            zh: "这台设备无法渲染这张图片。请调小导出字号，或缩短笔记后重试。",
-            en: "This image could not be rendered on this device. Try a smaller font size or a shorter note.",
-            pl: "Nie można wyrenderować tego obrazu na tym urządzeniu. Spróbuj mniejszej czcionki lub krótszej notatki.",
-          })
+        ? getMobileCatalog(resolvedLocale).mobile.imageShare.renderFailed
       : message;
     Alert.alert(
-      pickMobileCopy(resolvedLocale, { zh: "导出笔记图片失败", en: "Image export failed", pl: "Nie udało się wyeksportować obrazu" }),
-      localizedMessage || pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Try again later.", pl: "Spróbuj ponownie później." })
+      getMobileCatalog(resolvedLocale).mobile.imageShare.exportFailed,
+      localizedMessage || getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater
     );
   }, [clearImageExportTimeout, imageShareFromList, resolvedLocale]);
 
@@ -951,7 +923,7 @@ export const MemoDetailModal = ({
         setPreparedNoteImage(prepared);
       } else {
         setIsExportingImage(false);
-        if (!(await Sharing.isAvailableAsync())) throw new Error(pickMobileCopy(resolvedLocale, { zh: "当前设备无法打开系统分享面板。", en: "Sharing is unavailable on this device.", pl: "Udostępnianie jest niedostępne na tym urządzeniu." }));
+        if (!(await Sharing.isAvailableAsync())) throw new Error(getMobileCatalog(resolvedLocale).mobile.common.sharingUnavailable);
         await Sharing.shareAsync(file.uri, {
           dialogTitle: event.filename,
           mimeType: event.mimeType,
@@ -959,8 +931,8 @@ export const MemoDetailModal = ({
       }
     } catch (error) {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "导出笔记图片失败", en: "Image export failed", pl: "Nie udało się wyeksportować obrazu" }),
-        error instanceof Error ? error.message : pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Try again later.", pl: "Spróbuj ponownie później." })
+        getMobileCatalog(resolvedLocale).mobile.imageShare.exportFailed,
+        error instanceof Error ? error.message : getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater
       );
     } finally {
       imageExportChunksRef.current = [];
@@ -987,7 +959,7 @@ export const MemoDetailModal = ({
     if (!memo || !viewerReady || isExportingImage) return;
     const viewer = viewerRef.current;
     if (!viewer) {
-      failImageExport(pickMobileCopy(resolvedLocale, { zh: "笔记尚未准备好，请重试。", en: "The note viewer is not ready. Try again.", pl: "Notatka nie jest jeszcze gotowa. Spróbuj ponownie." }));
+      failImageExport(getMobileCatalog(resolvedLocale).mobile.imageShare.viewerNotReady);
       return;
     }
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -998,11 +970,7 @@ export const MemoDetailModal = ({
     setIsExportingImage(true);
     imageExportTimeoutRef.current = setTimeout(() => {
       if (imageExportRequestRef.current !== requestId) return;
-      failImageExport(pickMobileCopy(resolvedLocale, {
-        zh: "生成图片超时。请调小导出字号，或对较短的笔记重试。",
-        en: "Image generation took too long. Try a smaller font size or export a shorter note.",
-        pl: "Generowanie obrazu trwało zbyt długo. Spróbuj mniejszej czcionki lub wyeksportuj krótszą notatkę.",
-      }));
+      failImageExport(getMobileCatalog(resolvedLocale).mobile.imageShare.timedOut);
       setViewerReady(false);
       setViewerGeneration((generation) => generation + 1);
     }, IMAGE_EXPORT_TIMEOUT_MS);
@@ -1037,12 +1005,12 @@ export const MemoDetailModal = ({
 
   const sharePreparedNoteImage = useCallback(async (prepared: MobilePreparedNoteImage) => {
     try {
-      if (!(await Sharing.isAvailableAsync())) throw new Error(pickMobileCopy(resolvedLocale, { zh: "当前设备无法打开系统分享面板。", en: "Sharing is unavailable on this device.", pl: "Udostępnianie jest niedostępne na tym urządzeniu." }));
+      if (!(await Sharing.isAvailableAsync())) throw new Error(getMobileCatalog(resolvedLocale).mobile.common.sharingUnavailable);
       await Sharing.shareAsync(prepared.uri, { dialogTitle: prepared.filename, mimeType: prepared.mimeType });
     } catch (shareError) {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "分享失败", en: "Share failed", pl: "Nie udało się udostępnić" }),
-        shareError instanceof Error ? shareError.message : pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Try again later.", pl: "Spróbuj ponownie później." })
+        getMobileCatalog(resolvedLocale).mobile.memoDetail.shareFailed,
+        shareError instanceof Error ? shareError.message : getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater
       );
     }
   }, [resolvedLocale]);
@@ -1068,7 +1036,7 @@ export const MemoDetailModal = ({
         encoding: FileSystem.EncodingType.Base64,
       });
       savedPath = getSavedImagePath(destination)
-        ?? pickMobileCopy(resolvedLocale, { zh: `所选文件夹 / ${prepared.filename}`, en: `Selected folder / ${prepared.filename}`, pl: `Wybrany folder / ${prepared.filename}` });
+        ?? formatMobileCopy(getMobileCatalog(resolvedLocale).mobile.imageShare.selectedFolder, { filename: prepared.filename });
     } catch (saveError) {
       if (destination) {
         await FileSystem.StorageAccessFramework.deleteAsync(destination, { idempotent: true }).catch(() => {});
@@ -1076,10 +1044,10 @@ export const MemoDetailModal = ({
       const message = saveError instanceof Error ? saveError.message : "";
       const isUnwritableDirectory = /isn't writable|not writable|EACCES|Permission denied/i.test(message);
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "保存失败", en: "Save failed", pl: "Nie udało się zapisać" }),
+        getMobileCatalog(resolvedLocale).mobile.imageShare.saveFailed,
         isUnwritableDirectory
-          ? pickMobileCopy(resolvedLocale, { zh: "此文件夹无法写入。请选择内部存储中的其他文件夹，例如“Pictures”。", en: "This folder cannot accept files. Choose a folder in internal storage, such as Pictures.", pl: "Nie można zapisywać w tym folderze. Wybierz inny folder w pamięci wewnętrznej, np. „Pictures”." })
-          : (message || pickMobileCopy(resolvedLocale, { zh: "请稍后重试。", en: "Try again later.", pl: "Spróbuj ponownie później." }))
+          ? getMobileCatalog(resolvedLocale).mobile.imageShare.folderNotWritable
+          : (message || getMobileCatalog(resolvedLocale).mobile.common.tryAgainLater)
       );
     } finally {
       setImageSavePickerOpen(false);
@@ -1475,7 +1443,7 @@ export const MemoDetailModal = ({
               />
             ) : (
               <View style={styles.centerState}>
-                <Text style={styles.errorText}>{pickMobileCopy(resolvedLocale, { zh: "未登录。", en: "Not signed in.", pl: "Nie zalogowano." })}</Text>
+                <Text style={styles.errorText}>{getMobileCatalog(resolvedLocale).mobile.memoDetail.notSignedIn}</Text>
               </View>
             )}
             {!viewerReady ? (
@@ -1508,18 +1476,18 @@ export const MemoDetailModal = ({
             <Pressable onPress={() => setActionsOpen(false)} style={styles.actionSheetBackdrop}>
               <Pressable style={styles.actionSheet}>
                 <View style={styles.actionSheetHandle} />
-                <Text style={styles.actionSheetTitle}>{pickMobileCopy(resolvedLocale, { zh: "笔记操作", en: "Note actions", pl: "Działania na notatce" })}</Text>
+                <Text style={styles.actionSheetTitle}>{getMobileCatalog(resolvedLocale).mobile.memoDetail.noteActions}</Text>
                 {!memo.isDeleted ? (
                   <>
                     <DetailActionSheetItem
                       disabled={isSharing}
                       icon={isSharing ? <ActivityIndicator color="#16A06E" size="small" /> : <Share2 color="#0f172a" size={18} />}
-                      label={pickMobileCopy(resolvedLocale, { zh: "分享笔记", en: "Share note", pl: "Udostępnij notatkę" })}
+                      label={getMobileCatalog(resolvedLocale).mobile.memoDetail.shareNote}
                       onPress={() => closeActionsAndRun(() => onShare(memo))}
                     />
                     <DetailActionSheetItem
                       icon={<History color="#0f172a" size={18} />}
-                      label={pickMobileCopy(resolvedLocale, { zh: "版本历史", en: "Version history", pl: "Historia wersji" })}
+                      label={getMobileCatalog(resolvedLocale).editor.versionHistory}
                       onPress={() => closeActionsAndRun(() => onOpenRevisions(memo))}
                     />
                   </>
@@ -1527,7 +1495,7 @@ export const MemoDetailModal = ({
                 {!memo.isDeleted && !locksRichTextEdit ? (
                   <DetailActionSheetItem
                     icon={<Sparkles color="#16A06E" size={18} />}
-                    label={pickMobileCopy(resolvedLocale, { zh: "AI 笔记助手", en: "AI note assistant", pl: "Asystent AI notatki" })}
+                    label={getMobileCatalog(resolvedLocale).aiAssistant.title}
                     onPress={() => closeActionsAndRun(() => setAiAssistantOpen(true))}
                   />
                 ) : null}
@@ -1535,28 +1503,28 @@ export const MemoDetailModal = ({
                   disabled={!canCopyMemoId}
                   icon={<Copy color="#0f172a" size={18} />}
                   label={canCopyMemoId
-                    ? pickMobileCopy(resolvedLocale, { zh: "复制笔记 ID", en: "Copy note ID", pl: "Kopiuj ID notatki" })
-                    : pickMobileCopy(resolvedLocale, { zh: "同步后可复制笔记 ID", en: "Copy note ID after sync", pl: "ID notatki można skopiować po synchronizacji" })}
+                    ? getMobileCatalog(resolvedLocale).editor.copyNoteId
+                    : getMobileCatalog(resolvedLocale).editor.copyNoteIdAfterSync}
                   onPress={() => closeActionsAndRun(() => void copyMemoId())}
                 />
                 <DetailActionSheetItem
                   disabled={isExportingImage || !viewerReady || !imageSharePreferencesReady}
                   icon={isExportingImage ? <ActivityIndicator color="#16A06E" size="small" /> : <Share2 color="#0f172a" size={18} />}
                   label={isExportingImage
-                    ? pickMobileCopy(resolvedLocale, { zh: "正在生成分享图片", en: "Generating share image", pl: "Generowanie obrazu do udostępnienia" })
-                    : pickMobileCopy(resolvedLocale, { zh: "分享为图片", en: "Share as image", pl: "Udostępnij jako obraz" })}
+                    ? getMobileCatalog(resolvedLocale).mobile.imageShare.generating
+                    : getMobileCatalog(resolvedLocale).editor.imageShare.title}
                   onPress={() => closeActionsAndRun(() => setImageShareOptionsOpen(true))}
                 />
                 <DetailActionSheetItem
                   disabled={isExportingImage || !viewerReady || !imageSharePreferencesReady}
                   icon={<Download color="#0f172a" size={18} />}
-                  label={pickMobileCopy(resolvedLocale, { zh: "高级导出 PNG", en: "Advanced export PNG", pl: "Zaawansowany eksport PNG" })}
+                  label={getMobileCatalog(resolvedLocale).mobile.imageShare.advancedPng}
                   onPress={() => closeActionsAndRun(() => exportMemoImage("png"))}
                 />
                 <DetailActionSheetItem
                   disabled={isExportingImage || !viewerReady || !imageSharePreferencesReady}
                   icon={<Download color="#0f172a" size={18} />}
-                  label={pickMobileCopy(resolvedLocale, { zh: "高级导出 JPEG", en: "Advanced export JPEG", pl: "Zaawansowany eksport JPEG" })}
+                  label={getMobileCatalog(resolvedLocale).mobile.imageShare.advancedJpeg}
                   onPress={() => closeActionsAndRun(() => exportMemoImage("jpeg"))}
                 />
                 {memo.isDeleted ? (
@@ -1578,8 +1546,8 @@ export const MemoDetailModal = ({
           {preparedNoteImage ? (
           <SafeAreaView style={imageShareStyles.previewSafeArea}>
             <View style={imageShareStyles.previewHeader}>
-              <Text style={imageShareStyles.previewTitle}>{pickMobileCopy(resolvedLocale, { zh: "图片预览", en: "Image preview", pl: "Podgląd obrazu" })}</Text>
-              <Pressable accessibilityLabel={pickMobileCopy(resolvedLocale, { zh: "关闭预览", en: "Close preview", pl: "Zamknij podgląd" })} accessibilityRole="button" onPress={closeImagePreview} style={imageShareStyles.previewCloseButton}>
+              <Text style={imageShareStyles.previewTitle}>{getMobileCatalog(resolvedLocale).mobile.imageShare.preview}</Text>
+              <Pressable accessibilityLabel={getMobileCatalog(resolvedLocale).mobile.imageShare.closePreview} accessibilityRole="button" onPress={closeImagePreview} style={imageShareStyles.previewCloseButton}>
                 <X color="#0f172a" size={22} />
               </Pressable>
             </View>
@@ -1596,37 +1564,29 @@ export const MemoDetailModal = ({
               />
               {preparedNoteImage.failedImages > 0 ? (
                 <Text style={imageShareStyles.previewWarning}>
-                  {pickMobileCopy(resolvedLocale, {
-                    zh: `笔记中的 ${preparedNoteImage.totalImages} 张图片有 ${preparedNoteImage.failedImages} 张未能包含。`,
-                    en: `${preparedNoteImage.failedImages} of ${preparedNoteImage.totalImages} note image(s) could not be included.`,
-                    pl: `Nie udało się dołączyć obrazów z notatki: ${preparedNoteImage.failedImages} z ${preparedNoteImage.totalImages}.`,
-                  })}
+                  {formatMobileCopy(getMobileCatalog(resolvedLocale).mobile.imageShare.imagesOmitted, { failed: preparedNoteImage.failedImages, total: preparedNoteImage.totalImages })}
                 </Text>
               ) : null}
               {preparedNoteImage.height > 12_000 ? (
                 <Text style={imageShareStyles.previewWarning}>
-                  {pickMobileCopy(resolvedLocale, {
-                    zh: "图片较长，部分社交平台可能会压缩画质；建议保留保存的原图。",
-                    en: "This is a long image. Some social apps may reduce its quality; keep the saved original.",
-                    pl: "To długi obraz. Niektóre aplikacje społecznościowe mogą obniżyć jego jakość, więc zachowaj zapisany oryginał.",
-                  })}
+                  {getMobileCatalog(resolvedLocale).mobile.imageShare.longImageWarning}
                 </Text>
               ) : null}
             </ScrollView>
             <View style={imageShareStyles.previewActions}>
               <Pressable accessibilityRole="button" onPress={() => void savePreparedNoteImage(preparedNoteImage)} style={imageShareStyles.previewSecondaryButton}>
                 <Download color="#0f172a" size={18} />
-                <Text style={imageShareStyles.previewSecondaryButtonText}>{pickMobileCopy(resolvedLocale, { zh: "保存图片", en: "Save", pl: "Zapisz obraz" })}</Text>
+                <Text style={imageShareStyles.previewSecondaryButtonText}>{getMobileCatalog(resolvedLocale).mobile.imageShare.save}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => void sharePreparedNoteImage(preparedNoteImage)} style={imageShareStyles.previewPrimaryButton}>
                 <Share2 color="#ffffff" size={18} />
-                <Text style={imageShareStyles.previewPrimaryButtonText}>{pickMobileCopy(resolvedLocale, { zh: "系统分享", en: "Share", pl: "Udostępnij" })}</Text>
+                <Text style={imageShareStyles.previewPrimaryButtonText}>{getMobileCatalog(resolvedLocale).mobile.imageShare.share}</Text>
               </Pressable>
             </View>
             {savedImagePath ? (
               <View accessibilityLiveRegion="polite" pointerEvents="none" style={imageShareStyles.savedImageTipContainer}>
                 <View style={imageShareStyles.savedImageTip}>
-                  <Text style={imageShareStyles.savedImageTipTitle}>{pickMobileCopy(resolvedLocale, { zh: "图片已保存至", en: "Saved to", pl: "Zapisano w" })}</Text>
+                  <Text style={imageShareStyles.savedImageTipTitle}>{getMobileCatalog(resolvedLocale).mobile.imageShare.savedTo}</Text>
                   <Text style={imageShareStyles.savedImageTipPath}>{savedImagePath}</Text>
                 </View>
               </View>
@@ -1642,15 +1602,15 @@ export const MemoDetailModal = ({
           >
             <Pressable style={[styles.actionSheet, imageShareStyles.sheetContainer]}>
               <View style={styles.actionSheetHandle} />
-              <Text style={styles.actionSheetTitle}>{pickMobileCopy(resolvedLocale, { zh: "分享为图片", en: "Share as image", pl: "Udostępnij jako obraz" })}</Text>
+              <Text style={styles.actionSheetTitle}>{getMobileCatalog(resolvedLocale).editor.imageShare.title}</Text>
               <ScrollView contentContainerStyle={imageShareStyles.optionsContent} showsVerticalScrollIndicator={false} style={imageShareStyles.optionsScroll}>
 
               {imageSharePreferencesReady ? <>
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "主题风格", en: "Theme", pl: "Motyw" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).editor.imageShare.theme}</Text>
               <View style={imageShareStyles.themeGrid}>
                 {MOBILE_THEME_OPTIONS.map((item) => {
                   const isSelected = imageShareTheme === item.id;
-                  const label = pickMobileCopy(resolvedLocale, { zh: item.labelZh, en: item.labelEn, pl: item.labelPl });
+                  const label = getMobileCatalog(resolvedLocale).editor.imageShare.themes[item.id];
                   return (
                     <Pressable
                       key={item.id}
@@ -1676,12 +1636,12 @@ export const MemoDetailModal = ({
                 })}
               </View>
 
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "字号大小", en: "Font size", pl: "Rozmiar czcionki" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).mobile.imageShare.fontSize}</Text>
               <View style={imageShareStyles.choiceRow}>
                 {([
-                  ["sm", pickMobileCopy(resolvedLocale, { zh: "紧凑", en: "Compact", pl: "Kompaktowy" })],
-                  ["md", pickMobileCopy(resolvedLocale, { zh: "标准", en: "Standard", pl: "Standardowy" })],
-                  ["lg", pickMobileCopy(resolvedLocale, { zh: "舒适", en: "Comfortable", pl: "Wygodny" })],
+                  ["sm", getMobileCatalog(resolvedLocale).editor.imageShare.fontSizes.sm],
+                  ["md", getMobileCatalog(resolvedLocale).editor.imageShare.fontSizes.md],
+                  ["lg", getMobileCatalog(resolvedLocale).editor.imageShare.fontSizes.lg],
                 ] as const).map(([value, label]) => (
                   <Pressable key={value} accessibilityRole="button" onPress={() => setImageSharePreference("fontSize", value)} style={[imageShareStyles.choice, imageShareFontSize === value && imageShareStyles.choiceActive]}>
                     <Text style={[imageShareStyles.choiceText, imageShareFontSize === value && imageShareStyles.choiceTextActive]}>{label}</Text>
@@ -1689,12 +1649,12 @@ export const MemoDetailModal = ({
                 ))}
               </View>
 
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "卡片宽度", en: "Card width", pl: "Szerokość karty" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).mobile.imageShare.cardWidth}</Text>
               <View style={imageShareStyles.choiceRow}>
                 {([
-                  ["compact", pickMobileCopy(resolvedLocale, { zh: "紧凑", en: "Compact", pl: "Kompaktowy" })],
-                  ["standard", pickMobileCopy(resolvedLocale, { zh: "标准", en: "Standard", pl: "Standardowy" })],
-                  ["wide", pickMobileCopy(resolvedLocale, { zh: "宽屏", en: "Wide", pl: "Szeroki" })],
+                  ["compact", getMobileCatalog(resolvedLocale).editor.imageShare.fontSizes.sm],
+                  ["standard", getMobileCatalog(resolvedLocale).editor.imageShare.fontSizes.md],
+                  ["wide", getMobileCatalog(resolvedLocale).mobile.imageShare.wide],
                 ] as const).map(([value, label]) => (
                   <Pressable key={value} accessibilityRole="button" onPress={() => setImageSharePreference("cardWidth", value)} style={[imageShareStyles.choice, imageShareCardWidth === value && imageShareStyles.choiceActive]}>
                     <Text style={[imageShareStyles.choiceText, imageShareCardWidth === value && imageShareStyles.choiceTextActive]}>{label}</Text>
@@ -1702,11 +1662,11 @@ export const MemoDetailModal = ({
                 ))}
               </View>
 
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "字体风格", en: "Typography", pl: "Typografia" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).editor.imageShare.fontStyle}</Text>
               <View style={imageShareStyles.choiceRow}>
                 {MOBILE_FONT_OPTIONS.map((item) => {
                   const isSelected = imageShareFontStyle === item.id;
-                  const label = pickMobileCopy(resolvedLocale, { zh: item.labelZh, en: item.labelEn, pl: item.labelPl });
+                  const label = getMobileCatalog(resolvedLocale).editor.imageShare.fontStyles[item.labelKey];
                   return (
                     <Pressable
                       key={item.id}
@@ -1723,19 +1683,15 @@ export const MemoDetailModal = ({
                 })}
               </View>
 
-              <Text style={imageShareStyles.choiceText}>{pickMobileCopy(resolvedLocale, {
-                zh: "下载型字体首次使用需联网，下载后缓存；普惠体等推荐字体保留完整文件，首次下载较大。",
-                en: "Downloadable fonts need a connection on first use and are cached. PuHuiTi and other recommended fonts use complete original files, so initial downloads are larger.",
-                pl: "Czcionki do pobrania wymagają połączenia przy pierwszym użyciu i są potem zapisywane w pamięci podręcznej. PuHuiTi i inne polecane czcionki używają pełnych oryginalnych plików, więc pierwsze pobieranie jest większe.",
-              })}</Text>
+              <Text style={imageShareStyles.choiceText}>{getMobileCatalog(resolvedLocale).mobile.imageShare.fontDownloadNotice}</Text>
 
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "显示内容", en: "Content Elements", pl: "Elementy treści" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).editor.imageShare.metadata}</Text>
               {([
-                [pickMobileCopy(resolvedLocale, { zh: "笔记标题", en: "Title", pl: "Tytuł" }), imageShareTitle, "showTitle"],
-                [pickMobileCopy(resolvedLocale, { zh: "笔记本", en: "Notebook", pl: "Notatnik" }), imageShareNotebook, "showNotebook"],
-                [pickMobileCopy(resolvedLocale, { zh: "标签", en: "Tags", pl: "Tagi" }), imageShareTags, "showTags"],
-                [pickMobileCopy(resolvedLocale, { zh: "更新时间", en: "Updated time", pl: "Czas aktualizacji" }), imageShareUpdatedAt, "showUpdatedAt"],
-                [pickMobileCopy(resolvedLocale, { zh: "EdgeEver 品牌标识", en: "EdgeEver branding", pl: "Oznaczenie EdgeEver" }), imageShareBranding, "showBranding"],
+                [getMobileCatalog(resolvedLocale).editor.imageShare.fields.title, imageShareTitle, "showTitle"],
+                [getMobileCatalog(resolvedLocale).editor.imageShare.fields.notebook, imageShareNotebook, "showNotebook"],
+                [getMobileCatalog(resolvedLocale).mobile.imageShare.tags, imageShareTags, "showTags"],
+                [getMobileCatalog(resolvedLocale).editor.imageShare.fields.updatedAt, imageShareUpdatedAt, "showUpdatedAt"],
+                [getMobileCatalog(resolvedLocale).editor.imageShare.fields.branding, imageShareBranding, "showBranding"],
               ] as const).map(([label, selected, preferenceKey]) => (
                 <Pressable key={label} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => setImageSharePreference(preferenceKey, !selected)} style={imageShareStyles.optionRow}>
                   <Text style={imageShareStyles.optionLabel}>{label}</Text>
@@ -1743,14 +1699,14 @@ export const MemoDetailModal = ({
                 </Pressable>
               ))}
 
-              <Text style={styles.actionSheetSectionTitle}>{pickMobileCopy(resolvedLocale, { zh: "格式", en: "Format", pl: "Format" })}</Text>
+              <Text style={styles.actionSheetSectionTitle}>{getMobileCatalog(resolvedLocale).mobile.imageShare.format}</Text>
               <View style={imageShareStyles.choiceRow}>
                 {(["png", "jpeg"] as const).map((value) => (
                   <Pressable key={value} accessibilityRole="button" onPress={() => setImageSharePreference("format", value)} style={[imageShareStyles.formatChoice, imageShareFormat === value && imageShareStyles.choiceActive]}>
                     <Text style={[imageShareStyles.choiceText, imageShareFormat === value && imageShareStyles.choiceTextActive]}>
                       {value === "png"
-                        ? pickMobileCopy(resolvedLocale, { zh: "PNG · 超清无损", en: "PNG · Crisp text", pl: "PNG · Ostry tekst" })
-                        : pickMobileCopy(resolvedLocale, { zh: "JPEG · 体积小", en: "JPEG · Smaller file", pl: "JPEG · Mniejszy plik" })}
+                        ? getMobileCatalog(resolvedLocale).mobile.imageShare.pngOption
+                        : getMobileCatalog(resolvedLocale).mobile.imageShare.jpegOption}
                     </Text>
                   </Pressable>
                 ))}
@@ -1781,13 +1737,13 @@ export const MemoDetailModal = ({
                   <Text style={imageShareStyles.shareButtonText}>
                     {isExportingImage
                       ? (imageExportStage === "render"
-                        ? pickMobileCopy(resolvedLocale, { zh: "正在渲染图片…", en: "Rendering image…", pl: "Renderowanie obrazu…" })
+                        ? getMobileCatalog(resolvedLocale).mobile.imageShare.rendering
                         : imageExportStage === "transfer"
-                          ? pickMobileCopy(resolvedLocale, { zh: "正在保存预览…", en: "Saving preview…", pl: "Zapisywanie podglądu…" })
-                          : pickMobileCopy(resolvedLocale, { zh: "正在准备图片…", en: "Preparing image…", pl: "Przygotowywanie obrazu…" }))
+                          ? getMobileCatalog(resolvedLocale).mobile.imageShare.savingPreview
+                          : getMobileCatalog(resolvedLocale).mobile.imageShare.preparingImage)
                       : !viewerReady
-                      ? pickMobileCopy(resolvedLocale, { zh: "正在准备笔记…", en: "Preparing note…", pl: "Przygotowywanie notatki…" })
-                      : pickMobileCopy(resolvedLocale, { zh: "生成预览", en: "Generate preview", pl: "Generuj podgląd" })}
+                      ? getMobileCatalog(resolvedLocale).mobile.imageShare.preparingNote
+                      : getMobileCatalog(resolvedLocale).mobile.imageShare.generatePreview}
                   </Text>
                 </Pressable>
               </View>
@@ -1808,8 +1764,8 @@ export const MemoDetailModal = ({
             {imagePreview ? (
               <ZoomableImagePreview
                 key={imagePreview.source}
-                accessibilityHint={pickMobileCopy(resolvedLocale, { zh: "长按打开图片操作", en: "Long press for image actions", pl: "Przytrzymaj, aby otworzyć działania na obrazie" })}
-                accessibilityLabel={imagePreview.alt || pickMobileCopy(resolvedLocale, { zh: "图片预览", en: "Image preview", pl: "Podgląd obrazu" })}
+                accessibilityHint={getMobileCatalog(resolvedLocale).mobile.memoDetail.imageActionsHint}
+                accessibilityLabel={imagePreview.alt || getMobileCatalog(resolvedLocale).mobile.imageShare.preview}
                 onLongPress={() => {
                   // Long-press fullscreen preview → same resource sheet as ⋯ in the note.
                   const target = getMobileImageTarget(imagePreview.source, imagePreview.alt);
@@ -1833,7 +1789,7 @@ export const MemoDetailModal = ({
               />
             ) : null}
             <Pressable
-              accessibilityLabel={pickMobileCopy(resolvedLocale, { zh: "关闭图片预览", en: "Close image preview", pl: "Zamknij podgląd obrazu" })}
+              accessibilityLabel={getMobileCatalog(resolvedLocale).mobile.memoDetail.closeImagePreview}
               accessibilityRole="button"
               onPress={() => setImagePreview(null)}
               style={resourceImageStyles.previewClose}

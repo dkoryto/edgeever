@@ -3,8 +3,8 @@ import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import LocalTiptapEditor from "./LocalTiptapEditor";
 import { SAFE_DOM_WEBVIEW_PROPS } from "../lib/mobile-dom";
-import { pickMobileCopy } from "../lib/mobile-copy";
 import { getMermaidSvgAspectRatio, sanitizeMobileMermaidSvg } from "../lib/mobile-mermaid";
+import { getMobileCatalog } from "../lib/mobile-locale";
 
 type MermaidResult = { source: string; svg: string | null };
 type MermaidContextValue = {
@@ -97,16 +97,16 @@ export const MobileMermaidDiagram = ({
   useEffect(() => normalizedSource ? register?.(normalizedSource) : undefined, [normalizedSource, register]);
 
   if (!normalizedSource) {
-    return <Text style={[styles.message, theme === "dark" && styles.messageDark]}>{pickMobileCopy(locale, { zh: "此 Mermaid 图表暂无内容。", en: "This Mermaid diagram is empty.", pl: "Ten diagram Mermaid jest pusty." })}</Text>;
+    return <Text style={[styles.message, theme === "dark" && styles.messageDark]}>{getMobileCatalog(locale).mobile.mermaid.empty}</Text>;
   }
 
   const hasResult = context?.results.has(normalizedSource) ?? false;
   const svg = context?.results.get(normalizedSource) ?? null;
   if (!hasResult) {
-    return <Text style={[styles.message, theme === "dark" && styles.messageDark]}>{pickMobileCopy(locale, { zh: "正在渲染图表…", en: "Rendering diagram…", pl: "Renderowanie diagramu…" })}</Text>;
+    return <Text style={[styles.message, theme === "dark" && styles.messageDark]}>{getMobileCatalog(locale).mobile.mermaid.rendering}</Text>;
   }
   if (!svg) {
-    return <Text accessibilityRole="alert" style={styles.error}>{pickMobileCopy(locale, { zh: "无法渲染此 Mermaid 图表，请检查语法。", en: "Unable to render this Mermaid diagram. Check its syntax.", pl: "Nie można wyrenderować tego diagramu Mermaid. Sprawdź składnię." })}</Text>;
+    return <Text accessibilityRole="alert" style={styles.error}>{getMobileCatalog(locale).mobile.mermaid.renderFailed}</Text>;
   }
 
   const aspectRatio = getMermaidSvgAspectRatio(svg);
@@ -114,7 +114,7 @@ export const MobileMermaidDiagram = ({
   const height = Math.min(440, Math.max(120, availableWidth / aspectRatio));
   const nativeSvg = sanitizeMobileMermaidSvg(svg);
   return (
-    <View accessibilityLabel={pickMobileCopy(locale, { zh: "Mermaid 图表", en: "Mermaid diagram", pl: "Diagram Mermaid" })} accessible style={[styles.diagram, theme === "dark" && styles.diagramDark, { height }]}>
+    <View accessibilityLabel={getMobileCatalog(locale).mobile.mermaid.label} accessible style={[styles.diagram, theme === "dark" && styles.diagramDark, { height }]}>
       <SvgXml height="100%" width="100%" xml={nativeSvg} />
     </View>
   );

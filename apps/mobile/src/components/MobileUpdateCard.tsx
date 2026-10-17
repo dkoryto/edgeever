@@ -3,8 +3,7 @@ import * as Updates from "expo-updates";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, RefreshCw } from "./icons";
 import { Pressable, Text } from "./LocalizedText";
-import { pickMobileCopy } from "../lib/mobile-copy";
-import { useMobileLocale } from "../lib/mobile-locale";
+import { useMobileLocale, getMobileCatalog } from "../lib/mobile-locale";
 import { useMobileUpdate } from "../lib/mobile-update";
 import { useMobileTheme, resolveMobileThemeStyles } from "../lib/mobile-theme";
 
@@ -15,29 +14,25 @@ export const MobileUpdateCard = () => {
   const busy = status === "checking" || status === "downloading";
   const styles = resolveMobileThemeStyles(baseStyles, resolvedTheme);
   const checkLabel = status === "checking"
-    ? pickMobileCopy(resolvedLocale, { zh: "正在检查…", en: "Checking…", pl: "Sprawdzanie…" })
-    : pickMobileCopy(resolvedLocale, { zh: "检查更新", en: "Check for updates", pl: "Sprawdź aktualizacje" });
+    ? getMobileCatalog(resolvedLocale).mobile.update.checking
+    : getMobileCatalog(resolvedLocale).mobile.update.checkForUpdates;
   const openLabel = status === "downloading"
-    ? pickMobileCopy(resolvedLocale, { zh: "正在下载更新…", en: "Downloading update…", pl: "Pobieranie aktualizacji…" })
+    ? getMobileCatalog(resolvedLocale).mobile.update.downloadingUpdate
     : status === "ready"
-      ? pickMobileCopy(resolvedLocale, { zh: "重启以应用", en: "Restart to apply", pl: "Uruchom ponownie, aby zastosować" })
+      ? getMobileCatalog(resolvedLocale).mobile.update.restartToApply
       : updateKind === "ota"
-        ? pickMobileCopy(resolvedLocale, { zh: "下载更新", en: "Download update", pl: "Pobierz aktualizację" })
-        : pickMobileCopy(resolvedLocale, { zh: "选择更新渠道", en: "Choose update source", pl: "Wybierz źródło aktualizacji" });
+        ? getMobileCatalog(resolvedLocale).mobile.update.downloadUpdate
+        : getMobileCatalog(resolvedLocale).mobile.update.chooseSource;
 
   return (
     <View style={styles.card}>
       <View style={styles.copy}>
-        <Text style={styles.title}>{pickMobileCopy(resolvedLocale, { zh: "应用更新", en: "App updates", pl: "Aktualizacje aplikacji" })}</Text>
+        <Text style={styles.title}>{getMobileCatalog(resolvedLocale).mobile.update.title}</Text>
         <Text style={styles.description}>
-          {pickMobileCopy(resolvedLocale, {
-            zh: "EdgeEver 会自动检查兼容的应用内热更新和新版应用。",
-            en: "EdgeEver automatically checks for compatible in-app updates and newer app versions.",
-            pl: "EdgeEver automatycznie sprawdza zgodne aktualizacje w aplikacji i nowsze wersje aplikacji.",
-          })}
+          {getMobileCatalog(resolvedLocale).mobile.update.description}
         </Text>
         <Text style={styles.version}>
-          {pickMobileCopy(resolvedLocale, { zh: "当前版本", en: "Current version", pl: "Bieżąca wersja" })}: v{Updates.runtimeVersion ?? Constants.expoConfig?.version ?? "unknown"}
+          {getMobileCatalog(resolvedLocale).mobile.update.currentVersion}: v{Updates.runtimeVersion ?? Constants.expoConfig?.version ?? "unknown"}
         </Text>
       </View>
       {hasUpdate ? (
@@ -64,7 +59,7 @@ export const MobileUpdateCard = () => {
       </Pressable>
       {!isSupported ? (
         <Text style={styles.hint}>
-          {pickMobileCopy(resolvedLocale, { zh: "此功能会在已安装的正式版中启用。", en: "Available in installed release builds.", pl: "Dostępne w zainstalowanych wersjach wydania." })}
+          {getMobileCatalog(resolvedLocale).mobile.update.releaseBuildsOnly}
         </Text>
       ) : null}
     </View>

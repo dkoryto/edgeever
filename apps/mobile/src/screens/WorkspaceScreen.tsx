@@ -22,7 +22,6 @@ import { ApiRequestError } from "@edgeever/client";
 import { DEFAULT_MEMO_TITLE, getNotebookScopeIds, hasDiagramDocumentMarker, markdownToDoc, type MemoDetail, type MemoSummary, type Notebook } from "@edgeever/shared";
 import { MOBILE_UI_METRICS } from "@edgeever/shared/mobile-ui";
 import { clearMobileMemoDraft, readMobileMemoDraft, type MobileMemoDraft } from "../lib/mobile-drafts";
-import { pickMobileCopy } from "../lib/mobile-copy";
 import {
   readMobileImageCompressionEnabled,
   readMobileShowDescendantNotes,
@@ -32,7 +31,7 @@ import {
   writeMobileMemoListDensity,
   type MobileMemoListDensity,
 } from "../lib/preferences";
-import { localizeUntitledMemoTitle, localizeMissingNotebookName, toMobileSyncErrorSourceText, useMobileLocale } from "../lib/mobile-locale";
+import { localizeUntitledMemoTitle, localizeMissingNotebookName, toMobileSyncErrorSourceText, useMobileLocale, getMobileCatalog } from "../lib/mobile-locale";
 import { useSession } from "../lib/session";
 import {
   clearMobileMemoUpdateQueueItem,
@@ -472,12 +471,8 @@ export const WorkspaceScreen = ({
   const openRichEditor = useCallback((memo: MemoDetail, initialFocus: "body" | "title" = "body") => {
     if (hasDiagramDocumentMarker(memo.contentMarkdown)) {
       Alert.alert(
-        pickMobileCopy(resolvedLocale, { zh: "图表暂为只读", en: "View-only diagram", pl: "Diagram tylko do odczytu" }),
-        pickMobileCopy(resolvedLocale, {
-          zh: "可视化图表目前请在 Web 或桌面端编辑。",
-          en: "Visual diagram editing is currently available on Web and desktop.",
-          pl: "Diagramy wizualne można obecnie edytować w wersji Web i desktopowej.",
-        })
+        getMobileCatalog(resolvedLocale).mobile.workspace.diagramReadOnly,
+        getMobileCatalog(resolvedLocale).mobile.workspace.diagramReadOnlyHint
       );
       return;
     }
@@ -1096,7 +1091,7 @@ export const WorkspaceScreen = ({
       memo.contentJson,
       target,
       resource.filename || filename,
-      pickMobileCopy(resolvedLocale, { zh: "附件：", en: "Attachment: ", pl: "Załącznik: " })
+      getMobileCatalog(resolvedLocale).mobile.common.attachmentPrefix
     );
     await localUpdateMemoMutation.mutateAsync({
       memo,

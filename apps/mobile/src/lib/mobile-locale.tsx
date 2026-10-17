@@ -9,6 +9,7 @@ import {
 } from "./preferences";
 
 type SupportedMobileLocale = "zh-CN" | "en-US" | "ja" | "pl";
+export type MobileLocale = SupportedMobileLocale;
 type MobileLocaleContextValue = {
   preference: MobileLocalePreference;
   resolvedLocale: SupportedMobileLocale;
@@ -811,6 +812,17 @@ const polishTemplateTranslations = [
   ...mobilePolishTemplateTranslations,
   ...plTranslationPairs.filter((pair) => pair.pattern),
 ].sort((left, right) => right.source.length - left.source.length);
+
+type LocalizedCatalog<T> = { readonly [K in keyof T]: T[K] extends string ? string : LocalizedCatalog<T[K]> };
+export type MobileCatalog = LocalizedCatalog<typeof enUS>;
+
+// Typing every locale against the English shape makes a missing key a compile error.
+const mobileCatalogs: Record<SupportedMobileLocale, MobileCatalog> = { "zh-CN": zhCN, "en-US": enUS, ja, pl };
+
+export const getMobileCatalog = (locale: SupportedMobileLocale): MobileCatalog => mobileCatalogs[locale];
+
+export const formatMobileCopy = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
 
 const resolveSystemLocale = (): SupportedMobileLocale =>
   resolveSupportedLocale(Intl.DateTimeFormat().resolvedOptions().locale);

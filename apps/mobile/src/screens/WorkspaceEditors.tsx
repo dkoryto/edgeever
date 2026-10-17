@@ -22,8 +22,7 @@ import {
   writeMobileMemoDraft,
   type MobileMemoDraft,
 } from "../lib/mobile-drafts";
-import { pickMobileCopy } from "../lib/mobile-copy";
-import { localizeMissingNotebookName, useMobileLocale } from "../lib/mobile-locale";
+import { localizeMissingNotebookName, useMobileLocale, getMobileCatalog, formatMobileCopy } from "../lib/mobile-locale";
 import { useSession } from "../lib/session";
 import { queueMobileMemoCreate, queueMobileMemoUpdate } from "../lib/sync-queue";
 import { createMobileDataScope, upsertLocalMemo } from "../lib/local-mirror";
@@ -129,18 +128,10 @@ const alertProtectedImageLoadFailure = (
 ) => {
   const statusLabel = failure.status != null
     ? String(failure.status)
-    : pickMobileCopy(locale, {
-      zh: "网络错误",
-      en: "network error",
-      pl: "błąd sieci",
-    });
+    : getMobileCatalog(locale).mobile.common.networkError;
   Alert.alert(
-    pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" }),
-    pickMobileCopy(locale, {
-      zh: `笔记中的图片未能加载（${statusLabel}）。请检查网络后重试。`,
-      en: `Could not load a note image (${statusLabel}). Check the network and try again.`,
-      pl: `Nie udało się wczytać obrazu z notatki (${statusLabel}). Sprawdź połączenie i spróbuj ponownie.`,
-    })
+    getMobileCatalog(locale).mobile.common.imageLoadFailed,
+    formatMobileCopy(getMobileCatalog(locale).mobile.common.noteImageLoadFailed, { status: statusLabel })
   );
 };
 

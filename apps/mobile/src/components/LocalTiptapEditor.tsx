@@ -4,7 +4,6 @@ import { prepareNoteImageAssets } from "@edgeever/shared/note-image-fonts";
 import { noteImageAssetUrls } from "./note-image-asset-urls";
 import "katex/dist/katex.min.css";
 import { attachMobileReaderScroll } from "../lib/mobile-reader-scroll";
-import { pickMobileCopy } from "../lib/mobile-copy";
 import { Graph } from "@antv/x6";
 import Image from "@tiptap/extension-image";
 import CodeBlock from "@tiptap/extension-code-block";
@@ -72,6 +71,7 @@ import {
   getMobileEditorInputAttributes,
   getMobileEditorImageScaleLabel,
   getMobileEditorImageWidthPresetLabel,
+  getMobileEditorCopy,
   getMobileEditorPlaceholder,
   getMobileEditorToolbarActionLabel,
   getMobileEditorToolbarLabel,
@@ -501,10 +501,10 @@ const ReadOnlyX6Diagram = ({
   }, [diagram, theme, locale]);
 
   const title = diagram.kind === "mind-map"
-    ? pickMobileCopy(locale, { zh: "思维导图", en: "Mind map", pl: "Mapa myśli" })
+    ? getMobileEditorCopy(locale).diagram.mindMap
     : diagram.kind === "architecture"
-      ? pickMobileCopy(locale, { zh: "架构图", en: "Architecture diagram", pl: "Diagram architektury" })
-      : pickMobileCopy(locale, { zh: "流程图", en: "Flowchart", pl: "Schemat blokowy" });
+      ? getMobileEditorCopy(locale).diagram.architecture
+      : getMobileEditorCopy(locale).diagram.flowchart;
   return (
     <section className="edgeever-x6-document">
       <div aria-label={title} className="edgeever-x6-diagram" key={diagram.kind} ref={containerRef} role="img" />
@@ -699,11 +699,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
             parameterKind: "none",
             resultMode: "both",
             output: "",
-            error: pickMobileCopy(props.locale, {
-              zh: "所选指令已不存在，请重新选择。",
-              en: "The selected prompt no longer exists. Choose another prompt.",
-              pl: "Wybrane polecenie już nie istnieje. Wybierz inne.",
-            }),
+            error: getMobileEditorCopy(props.locale).ai.promptMissing,
           };
         }
         return {
@@ -941,7 +937,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
     insertImageUploadPlaceholder(
       editor,
       createMobileImageUploadPlaceholderSource(uploadIdValue),
-      pickMobileCopy(props.locale, { zh: "图片上传中…", en: "Uploading image…", pl: "Przesyłanie obrazu…" }),
+      getMobileEditorCopy(props.locale).image.uploading,
       previewDataUrlValue,
       pendingImageSelectionRef.current
     );
@@ -991,7 +987,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       type: "paragraph",
       content: [{
         type: "text",
-        text: `${pickMobileCopy(props.locale, { zh: "附件：", en: "Attachment: ", pl: "Załącznik: " })}${filenameValue}`,
+        text: `${getMobileEditorCopy(props.locale).attachmentPrefix}${filenameValue}`,
         marks: [{
           type: "link",
           attrs: {
@@ -1033,7 +1029,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
     editor.view.dispatch(editor.state.tr.replaceWith(
       range.from,
       range.to,
-      editor.schema.text(`${pickMobileCopy(props.locale, { zh: "附件：", en: "Attachment: ", pl: "Załącznik: " })}${filenameValue}`, [linkMark])
+      editor.schema.text(`${getMobileEditorCopy(props.locale).attachmentPrefix}${filenameValue}`, [linkMark])
     ));
   }, [editor, props.locale]);
 
@@ -1159,7 +1155,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
         ...current,
         generating: false,
         requestId: null,
-        error: requestError instanceof Error ? requestError.message : pickMobileCopy(props.locale, { zh: "AI 生成失败。", en: "AI generation failed.", pl: "Generowanie AI nie powiodło się." }),
+        error: requestError instanceof Error ? requestError.message : getMobileEditorCopy(props.locale).ai.generationFailed,
       } : current);
     });
   }, [aiPanel, props.locale]);
@@ -1199,11 +1195,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
     if (!isAiSelectionSnapshotCurrent(aiPanel.selection, currentDocument, editor.state.doc.content.size)) {
       setAiPanel((current) => current ? {
         ...current,
-        error: pickMobileCopy(props.locale, {
-          zh: "笔记内容已变化，选区已失效，请重新选择文本。",
-          en: "The selection expired because the note changed. Select the text again.",
-          pl: "Notatka się zmieniła, więc zaznaczenie wygasło. Zaznacz tekst ponownie.",
-        }),
+        error: getMobileEditorCopy(props.locale).ai.selectionExpired,
       } : current);
       return;
     }
@@ -1739,7 +1731,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
             ))}
           {onAiRequestRef.current ? (
             <button
-              aria-label={pickMobileCopy(props.locale, { zh: "用 AI 处理正文或选中内容", en: "Use AI on the note or selected text", pl: "Użyj AI na notatce lub zaznaczonym tekście" })}
+              aria-label={getMobileEditorCopy(props.locale).ai.openForNote}
               className="edgeever-ai-toolbar-button"
               onClick={requestOpenAiForSelection}
               onMouseDown={(event) => event.preventDefault()}
@@ -1760,7 +1752,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       )}
       {aiSelectionTrigger && !aiPanel ? (
         <button
-          aria-label={pickMobileCopy(props.locale, { zh: "用 AI 处理选中内容", en: "Use AI on selected text", pl: "Użyj AI na zaznaczonym tekście" })}
+          aria-label={getMobileEditorCopy(props.locale).ai.openForSelection}
           className="edgeever-ai-selection-trigger"
           onClick={requestOpenAiForSelection}
           onMouseDown={(event) => event.preventDefault()}
@@ -1774,14 +1766,14 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       ) : null}
       {aiSelectionHint ? (
         <div aria-live="polite" className="edgeever-ai-selection-hint" role="status">
-          {pickMobileCopy(props.locale, { zh: "请先输入正文内容。", en: "Add some note content first.", pl: "Najpierw dodaj treść notatki." })}
+          {getMobileEditorCopy(props.locale).ai.emptyNote}
         </div>
       ) : null}
       {aiUndoFingerprint && !aiPanel ? (
         <div aria-live="polite" className="edgeever-ai-undo" role="status">
-          <span>{pickMobileCopy(props.locale, { zh: "AI 已更新选中内容。", en: "AI updated the selection.", pl: "AI zaktualizowało zaznaczenie." })}</span>
+          <span>{getMobileEditorCopy(props.locale).ai.selectionUpdated}</span>
           <button onClick={undoAiSelectionDraft} onMouseDown={(event) => event.preventDefault()} type="button">
-            {pickMobileCopy(props.locale, { zh: "撤销", en: "Undo", pl: "Cofnij" })}
+            {getMobileEditorCopy(props.locale).actions.undo}
           </button>
         </div>
       ) : null}
@@ -1838,39 +1830,9 @@ const MobileSelectionAiPanel = ({
   prompts: AiPromptTemplate[];
 }) => {
   const [picker, setPicker] = useState<MobileAiPickerKind | null>(null);
-  const actionLabels: Record<AiAction, string> = {
-    summarize: pickMobileCopy(locale, { zh: "精简总结", en: "Summarize", pl: "Podsumuj" }),
-    "extract-key-points": pickMobileCopy(locale, { zh: "提炼要点", en: "Key points", pl: "Kluczowe punkty" }),
-    "extract-todos": pickMobileCopy(locale, { zh: "提取待办", en: "Extract tasks", pl: "Wyodrębnij zadania" }),
-    "rewrite-proofread": pickMobileCopy(locale, { zh: "改写与校对", en: "Rewrite & proofread", pl: "Przepisz i popraw" }),
-    translate: pickMobileCopy(locale, { zh: "全文翻译", en: "Translate", pl: "Przetłumacz" }),
-    "improve-writing": pickMobileCopy(locale, { zh: "润色表达", en: "Polish", pl: "Dopracuj styl" }),
-    "fix-spelling-grammar": pickMobileCopy(locale, { zh: "修正拼写与语法", en: "Fix spelling & grammar", pl: "Popraw pisownię i gramatykę" }),
-    "make-shorter": pickMobileCopy(locale, { zh: "精炼表达", en: "Make concise", pl: "Skróć" }),
-    "make-longer": pickMobileCopy(locale, { zh: "扩写内容", en: "Make longer", pl: "Rozwiń" }),
-    "simplify-language": pickMobileCopy(locale, { zh: "简化表达", en: "Simplify language", pl: "Uprość język" }),
-    "change-tone": pickMobileCopy(locale, { zh: "调整语气", en: "Change tone", pl: "Zmień ton" }),
-    "continue-writing": pickMobileCopy(locale, { zh: "继续写作", en: "Continue writing", pl: "Pisz dalej" }),
-    custom: pickMobileCopy(locale, { zh: "自定义指令", en: "Custom prompt", pl: "Własne polecenie" }),
-  };
-  const languageLabels: Record<AiTargetLanguage, string> = {
-    en: pickMobileCopy(locale, { zh: "英语", en: "English", pl: "Angielski" }),
-    "zh-CN": pickMobileCopy(locale, { zh: "简体中文", en: "Simplified Chinese", pl: "Chiński uproszczony" }),
-    "zh-TW": pickMobileCopy(locale, { zh: "繁体中文", en: "Traditional Chinese", pl: "Chiński tradycyjny" }),
-    ja: pickMobileCopy(locale, { zh: "日语", en: "Japanese", pl: "Japoński" }),
-    ko: pickMobileCopy(locale, { zh: "韩语", en: "Korean", pl: "Koreański" }),
-    es: pickMobileCopy(locale, { zh: "西班牙语", en: "Spanish", pl: "Hiszpański" }),
-    fr: pickMobileCopy(locale, { zh: "法语", en: "French", pl: "Francuski" }),
-    de: pickMobileCopy(locale, { zh: "德语", en: "German", pl: "Niemiecki" }),
-    pt: pickMobileCopy(locale, { zh: "葡萄牙语", en: "Portuguese", pl: "Portugalski" }),
-    pl: pickMobileCopy(locale, { zh: "波兰语", en: "Polish", pl: "Polski" }),
-  };
-  const toneLabels: Record<AiTone, string> = {
-    professional: pickMobileCopy(locale, { zh: "专业", en: "Professional", pl: "Profesjonalny" }),
-    friendly: pickMobileCopy(locale, { zh: "友好", en: "Friendly", pl: "Przyjazny" }),
-    casual: pickMobileCopy(locale, { zh: "轻松", en: "Casual", pl: "Swobodny" }),
-    direct: pickMobileCopy(locale, { zh: "直接", en: "Direct", pl: "Bezpośredni" }),
-  };
+  const actionLabels: Record<AiAction, string> = getMobileEditorCopy(locale).ai.actions;
+  const languageLabels: Record<AiTargetLanguage, string> = getMobileEditorCopy(locale).ai.languages;
+  const toneLabels: Record<AiTone, string> = getMobileEditorCopy(locale).ai.tones;
   const update = (next: Partial<MobileAiPanelState>) => onChange((current) => current ? { ...current, ...next } : current);
   const generateDisabled = panel.generating || (!panel.promptId && panel.action === "custom" && !panel.customInstruction.trim());
   const appendDisabled = panel.generating || !panel.output || panel.resultMode === "replace";
@@ -1954,10 +1916,10 @@ const MobileSelectionAiPanel = ({
         : [];
 
   const pickerTitle = picker === "action"
-    ? pickMobileCopy(locale, { zh: "选择处理方式", en: "Choose an action", pl: "Wybierz działanie" })
+    ? getMobileEditorCopy(locale).ai.chooseAction
     : picker === "language"
-      ? pickMobileCopy(locale, { zh: "选择目标语言", en: "Choose target language", pl: "Wybierz język docelowy" })
-      : pickMobileCopy(locale, { zh: "选择语气", en: "Choose tone", pl: "Wybierz ton" });
+      ? getMobileEditorCopy(locale).ai.chooseTargetLanguage
+      : getMobileEditorCopy(locale).ai.chooseTone;
 
   const choosePickerOption = (value: string) => {
     if (picker === "action") selectPromptOrAction(value);
@@ -1986,8 +1948,8 @@ const MobileSelectionAiPanel = ({
   return (
     <section
       aria-label={panel.selection.wholeNote
-        ? pickMobileCopy(locale, { zh: "AI 全文助手", en: "AI whole-note assistant", pl: "Asystent AI całej notatki" })
-        : pickMobileCopy(locale, { zh: "AI 选区助手", en: "AI selection assistant", pl: "Asystent AI zaznaczenia" })}
+        ? getMobileEditorCopy(locale).ai.noteTitle
+        : getMobileEditorCopy(locale).ai.selectionTitle}
       aria-modal="true"
       className="edgeever-ai-panel"
       role="dialog"
@@ -1995,19 +1957,19 @@ const MobileSelectionAiPanel = ({
       <header className="edgeever-ai-panel-header">
         <div>
           <strong>{panel.selection.wholeNote
-            ? pickMobileCopy(locale, { zh: "AI 全文助手", en: "AI whole-note assistant", pl: "Asystent AI całej notatki" })
-            : pickMobileCopy(locale, { zh: "AI 选区助手", en: "AI selection assistant", pl: "Asystent AI zaznaczenia" })}</strong>
+            ? getMobileEditorCopy(locale).ai.noteTitle
+            : getMobileEditorCopy(locale).ai.selectionTitle}</strong>
           <small>{panel.selection.wholeNote
-            ? pickMobileCopy(locale, { zh: "未选择文字，将处理整篇正文。", en: "No text selected; the whole note will be processed.", pl: "Nie zaznaczono tekstu, więc zostanie przetworzona cała notatka." })
-            : pickMobileCopy(locale, { zh: "只处理当前选中的正文。", en: "Only the selected text will be processed.", pl: "Zostanie przetworzony tylko zaznaczony tekst." })}</small>
+            ? getMobileEditorCopy(locale).ai.noteScopeHint
+            : getMobileEditorCopy(locale).ai.selectionScopeHint}</small>
         </div>
-        <button aria-label={pickMobileCopy(locale, { zh: "关闭", en: "Close", pl: "Zamknij" })} onClick={onClose} type="button">×</button>
+        <button aria-label={getMobileEditorCopy(locale).close} onClick={onClose} type="button">×</button>
       </header>
       <div className="edgeever-ai-panel-body">
         <MobileAiPickerField
           disabled={panel.generating}
           expanded={picker === "action"}
-          label={pickMobileCopy(locale, { zh: "处理方式", en: "Action", pl: "Działanie" })}
+          label={getMobileEditorCopy(locale).ai.action}
           onOpen={() => setPicker("action")}
           value={selectedPrompt?.name ?? actionLabels[panel.action]}
         />
@@ -2015,7 +1977,7 @@ const MobileSelectionAiPanel = ({
           <MobileAiPickerField
             disabled={panel.generating}
             expanded={picker === "language"}
-            label={pickMobileCopy(locale, { zh: "目标语言", en: "Target language", pl: "Język docelowy" })}
+            label={getMobileEditorCopy(locale).ai.targetLanguage}
             onOpen={() => setPicker("language")}
             value={languageLabels[panel.targetLanguage]}
           />
@@ -2024,34 +1986,34 @@ const MobileSelectionAiPanel = ({
           <MobileAiPickerField
             disabled={panel.generating}
             expanded={picker === "tone"}
-            label={pickMobileCopy(locale, { zh: "语气", en: "Tone", pl: "Ton" })}
+            label={getMobileEditorCopy(locale).ai.tone}
             onOpen={() => setPicker("tone")}
             value={toneLabels[panel.tone]}
           />
         ) : null}
         {!panel.promptId && panel.action === "custom" ? (
           <label>
-            <span>{pickMobileCopy(locale, { zh: "告诉 AI 你想怎么处理", en: "Tell AI what to do", pl: "Powiedz AI, co ma zrobić" })}</span>
+            <span>{getMobileEditorCopy(locale).ai.instruction}</span>
             <textarea
               disabled={panel.generating}
               maxLength={2000}
               onChange={(event) => update({ customInstruction: event.target.value })}
-              placeholder={pickMobileCopy(locale, { zh: "例如：改写成一封简洁的邮件。", en: "For example: Rewrite this as a concise email.", pl: "Na przykład: przepisz to jako zwięzłego e-maila." })}
+              placeholder={getMobileEditorCopy(locale).ai.instructionPlaceholder}
               rows={3}
               value={panel.customInstruction}
             />
           </label>
         ) : null}
         <div className="edgeever-ai-result-heading">
-          <span>{pickMobileCopy(locale, { zh: "AI 草稿", en: "AI draft", pl: "Szkic AI" })}</span>
-          {panel.generating ? <small>{pickMobileCopy(locale, { zh: "生成中…", en: "Generating…", pl: "Generowanie…" })}</small> : null}
+          <span>{getMobileEditorCopy(locale).ai.draft}</span>
+          {panel.generating ? <small>{getMobileEditorCopy(locale).ai.generating}</small> : null}
         </div>
         <div aria-live="polite" className="edgeever-ai-result">
-          {panel.output || <span>{pickMobileCopy(locale, { zh: "生成的草稿会显示在这里。", en: "The generated draft will appear here.", pl: "Wygenerowany szkic pojawi się tutaj." })}</span>}
+          {panel.output || <span>{getMobileEditorCopy(locale).ai.draftPlaceholder}</span>}
         </div>
         {panel.output && !panel.generating ? (
           <label>
-            <span>{pickMobileCopy(locale, { zh: "继续调整", en: "Refine result", pl: "Dopracuj wynik" })}</span>
+            <span>{getMobileEditorCopy(locale).ai.refineResult}</span>
             <div className="edgeever-ai-refine-row">
               <input
                 maxLength={2000}
@@ -2062,11 +2024,11 @@ const MobileSelectionAiPanel = ({
                     onRefine(panel.refineInstruction);
                   }
                 }}
-                placeholder={pickMobileCopy(locale, { zh: "例如：再简洁一点", en: "Make it more concise", pl: "Na przykład: bardziej zwięźle" })}
+                placeholder={getMobileEditorCopy(locale).ai.refinePlaceholder}
                 value={panel.refineInstruction}
               />
               <button disabled={!panel.refineInstruction.trim()} onClick={() => onRefine(panel.refineInstruction)} type="button">
-                {pickMobileCopy(locale, { zh: "调整", en: "Refine", pl: "Dopracuj" })}
+                {getMobileEditorCopy(locale).ai.refine}
               </button>
             </div>
           </label>
@@ -2076,17 +2038,17 @@ const MobileSelectionAiPanel = ({
       <footer className="edgeever-ai-panel-footer">
         <div>
           <button disabled={appendDisabled} onClick={() => onApply("append")} type="button">
-            {pickMobileCopy(locale, { zh: "插入到选区后", en: "Insert after", pl: "Wstaw po zaznaczeniu" })}
+            {getMobileEditorCopy(locale).ai.insertAfter}
           </button>
           <button disabled={replaceDisabled} onClick={() => onApply("replace")} type="button">
-            {pickMobileCopy(locale, { zh: "替换选中内容", en: "Replace selection", pl: "Zastąp zaznaczenie" })}
+            {getMobileEditorCopy(locale).ai.replaceSelection}
           </button>
         </div>
         {panel.generating ? (
-          <button className="is-primary" onClick={onStop} type="button">{pickMobileCopy(locale, { zh: "停止", en: "Stop", pl: "Zatrzymaj" })}</button>
+          <button className="is-primary" onClick={onStop} type="button">{getMobileEditorCopy(locale).ai.stop}</button>
         ) : (
           <button className="is-primary" disabled={generateDisabled} onClick={onGenerate} type="button">
-            {panel.output ? pickMobileCopy(locale, { zh: "重新生成", en: "Regenerate", pl: "Generuj ponownie" }) : pickMobileCopy(locale, { zh: "生成", en: "Generate", pl: "Generuj" })}
+            {panel.output ? getMobileEditorCopy(locale).ai.regenerate : getMobileEditorCopy(locale).ai.generate}
           </button>
         )}
       </footer>
@@ -2102,7 +2064,7 @@ const MobileSelectionAiPanel = ({
             <div aria-hidden="true" className="edgeever-ai-picker-handle" />
             <header className="edgeever-ai-picker-header">
               <strong>{pickerTitle}</strong>
-              <button aria-label={pickMobileCopy(locale, { zh: "关闭", en: "Close", pl: "Zamknij" })} onClick={() => setPicker(null)} type="button">×</button>
+              <button aria-label={getMobileEditorCopy(locale).close} onClick={() => setPicker(null)} type="button">×</button>
             </header>
             <div aria-label={pickerTitle} className="edgeever-ai-picker-options" role="radiogroup">
               {pickerOptions.map((option) => (
@@ -2366,12 +2328,12 @@ const createMobileCodeBlockExtension = (
       message.className = "edgeever-mermaid-message";
       svgContainer.className = "edgeever-mermaid-svg";
       svgContainer.setAttribute("role", "img");
-      svgContainer.setAttribute("aria-label", pickMobileCopy(locale, { zh: "Mermaid 图表预览", en: "Mermaid diagram preview", pl: "Podgląd diagramu Mermaid" }));
+      svgContainer.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.mermaidPreview);
       copyButton.type = "button";
       copyButton.className = "edgeever-code-copy-button";
       copyButton.contentEditable = "false";
-      copyButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" }));
-      copyButton.textContent = pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" });
+      copyButton.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.copy);
+      copyButton.textContent = getMobileEditorCopy(locale).codeBlock.copy;
       copyButton.addEventListener("pointerdown", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -2380,21 +2342,21 @@ const createMobileCodeBlockExtension = (
         event.preventDefault();
         event.stopPropagation();
         void Clipboard.setStringAsync(currentNode.textContent).then(() => {
-          copyButton.textContent = pickMobileCopy(locale, { zh: "已复制", en: "Copied", pl: "Skopiowano" });
-          copyButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "已复制", en: "Copied", pl: "Skopiowano" }));
+          copyButton.textContent = getMobileEditorCopy(locale).codeBlock.copied;
+          copyButton.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.copied);
           if (copyResetTimer !== null) window.clearTimeout(copyResetTimer);
           copyResetTimer = window.setTimeout(() => {
-            copyButton.textContent = pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" });
-            copyButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" }));
+            copyButton.textContent = getMobileEditorCopy(locale).codeBlock.copy;
+            copyButton.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.copy);
             copyResetTimer = null;
           }, 1800);
         }).catch(() => {
-          copyButton.textContent = pickMobileCopy(locale, { zh: "复制失败", en: "Copy failed", pl: "Nie udało się skopiować" });
-          copyButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "复制失败", en: "Copy failed", pl: "Nie udało się skopiować" }));
+          copyButton.textContent = getMobileEditorCopy(locale).codeBlock.copyFailed;
+          copyButton.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.copyFailed);
           if (copyResetTimer !== null) window.clearTimeout(copyResetTimer);
           copyResetTimer = window.setTimeout(() => {
-            copyButton.textContent = pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" });
-            copyButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "复制代码", en: "Copy code", pl: "Kopiuj kod" }));
+            copyButton.textContent = getMobileEditorCopy(locale).codeBlock.copy;
+            copyButton.setAttribute("aria-label", getMobileEditorCopy(locale).codeBlock.copy);
             copyResetTimer = null;
           }, 1800);
         });
@@ -2424,8 +2386,8 @@ const createMobileCodeBlockExtension = (
         wrapper.dataset.language = language;
         preview.hidden = !isMermaid;
         code.setAttribute("aria-label", isMermaid
-          ? pickMobileCopy(locale, { zh: "Mermaid 源码", en: "Mermaid source", pl: "Źródło Mermaid" })
-          : pickMobileCopy(locale, { zh: "代码源码", en: "Code source", pl: "Kod źródłowy" }));
+          ? getMobileEditorCopy(locale).codeBlock.mermaidSource
+          : getMobileEditorCopy(locale).codeBlock.codeSource);
         if (!isMermaid) {
           preview.replaceChildren();
           return;
@@ -2434,7 +2396,7 @@ const createMobileCodeBlockExtension = (
         const source = currentNode.textContent.trim();
         if (!source) {
           message.className = "edgeever-mermaid-message";
-          message.textContent = pickMobileCopy(locale, { zh: "请在下方输入 Mermaid 源码。", en: "Enter Mermaid source below.", pl: "Wpisz poniżej kod źródłowy Mermaid." });
+          message.textContent = getMobileEditorCopy(locale).codeBlock.mermaidEmpty;
           preview.replaceChildren(message);
           return;
         }
@@ -2442,7 +2404,7 @@ const createMobileCodeBlockExtension = (
         const activeRequest = renderRequest;
         renderTimer = window.setTimeout(() => {
           message.className = "edgeever-mermaid-message";
-          message.textContent = pickMobileCopy(locale, { zh: "正在渲染图表…", en: "Rendering diagram…", pl: "Renderowanie diagramu…" });
+          message.textContent = getMobileEditorCopy(locale).codeBlock.rendering;
           preview.replaceChildren(message);
           void loadMermaid()
             .then(async (mermaid) => {
@@ -2484,11 +2446,7 @@ const createMobileCodeBlockExtension = (
                 return;
               }
               message.className = "edgeever-mermaid-error";
-              message.textContent = pickMobileCopy(locale, {
-                zh: "无法渲染此图表，请检查语法。",
-                en: "Unable to render this diagram. Check its syntax.",
-                pl: "Nie można wyrenderować tego diagramu. Sprawdź składnię.",
-              });
+              message.textContent = getMobileEditorCopy(locale).codeBlock.renderFailed;
               preview.replaceChildren(message);
             });
         }, 300);
@@ -2673,7 +2631,7 @@ const createProtectedImageExtension = (
         const spinner = document.createElement("span");
         spinner.className = "edgeever-image-upload-spinner";
         spinner.setAttribute("aria-hidden", "true");
-        overlay.append(spinner, pickMobileCopy(locale, { zh: "图片上传中…", en: "Uploading image…", pl: "Przesyłanie obrazu…" }));
+        overlay.append(spinner, getMobileEditorCopy(locale).image.uploading);
         if (previewSource) {
           placeholder.append(preview);
         }
@@ -2728,7 +2686,7 @@ const createProtectedImageExtension = (
             if (activeRequestId !== requestId) {
               return;
             }
-            overlay.textContent = pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" });
+            overlay.textContent = getMobileEditorCopy(locale).image.loadFailed;
           };
           preload.src = displaySource;
         };
@@ -2753,11 +2711,11 @@ const createProtectedImageExtension = (
                 revealLoadedImage(dataUrl, attributes, activeRequestId);
                 return;
               }
-              overlay.textContent = pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" });
+              overlay.textContent = getMobileEditorCopy(locale).image.loadFailed;
             })
             .catch(() => {
               if (activeRequestId === requestId) {
-                overlay.textContent = pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" });
+                overlay.textContent = getMobileEditorCopy(locale).image.loadFailed;
               }
             });
         };
@@ -2821,7 +2779,7 @@ const createProtectedImageExtension = (
       actionButton.className = "edgeever-image-actions";
       actionButton.contentEditable = "false";
       actionButton.hidden = true;
-      actionButton.setAttribute("aria-label", pickMobileCopy(locale, { zh: "图片操作", en: "Image actions", pl: "Działania na obrazie" }));
+      actionButton.setAttribute("aria-label", getMobileEditorCopy(locale).image.actions);
       actionButton.textContent = "⋯";
       bindImageActionButton(wrapper, actionButton);
       image.addEventListener("click", (event) => {
@@ -2857,7 +2815,7 @@ const createProtectedImageExtension = (
           loading.replaceChildren();
           const label = document.createElement("span");
           label.className = "edgeever-image-loading-label";
-          label.textContent = pickMobileCopy(locale, { zh: "图片加载失败", en: "Image failed to load", pl: "Nie udało się wczytać obrazu" });
+          label.textContent = getMobileEditorCopy(locale).image.loadFailed;
           loading.append(label);
           loading.hidden = false;
         } else if (phase === "loading") {

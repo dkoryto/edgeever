@@ -8,7 +8,6 @@ export const GOOGLE_PLAY_APP_URL = "market://details?id=org.edgeever.mobile";
 export const GOOGLE_PLAY_WEB_URL = "https://play.google.com/store/apps/details?id=org.edgeever.mobile";
 
 type MobileInstallUpdateSourceBase = {
-  label: { zh: string; en: string; pl: string };
   url: string;
 };
 
@@ -28,12 +27,10 @@ export const ANDROID_INSTALL_UPDATE_SOURCES: readonly MobileInstallUpdateSource[
     applicationId: ANDROID_APPLICATION_ID,
     fallbackUrl: GOOGLE_PLAY_WEB_URL,
     id: "google-play",
-    label: { zh: "在 Google Play 更新", en: "Update on Google Play", pl: "Zaktualizuj w Google Play" },
     url: GOOGLE_PLAY_APP_URL,
   },
   {
     id: "github",
-    label: { zh: "从 GitHub 下载", en: "Download from GitHub", pl: "Pobierz z GitHub" },
     url: GITHUB_LATEST_RELEASE_URL,
   },
 ];

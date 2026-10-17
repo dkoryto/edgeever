@@ -3,9 +3,9 @@ import { ApiRequestError } from "@edgeever/client";
 import { useQuery } from "@tanstack/react-query";
 import type { LocalTiptapEditorRef } from "../components/LocalTiptapEditor";
 import { buildMobileAiStreamBridgePayload, parseMobileSelectionAiRequest } from "../lib/mobile-ai-selection";
-import { pickMobileCopy } from "../lib/mobile-copy";
 import { safeDomCall } from "../lib/safe-dom-call";
 import type { useSession } from "../lib/session";
+import { getMobileCatalog } from "../lib/mobile-locale";
 
 type MobileAiClient = NonNullable<ReturnType<typeof useSession>["client"]>;
 
@@ -38,9 +38,9 @@ export const useMobileSelectionAi = ({
   }, []);
 
   const requestSelectionAi = useCallback(async (requestJson: string) => {
-    if (!client) throw new Error(pickMobileCopy(resolvedLocale, { zh: "当前未登录，无法使用 AI。", en: "AI is unavailable while signed out.", pl: "AI jest niedostępne bez zalogowania." }));
+    if (!client) throw new Error(getMobileCatalog(resolvedLocale).mobile.ai.signedOut);
     const request = parseMobileSelectionAiRequest(requestJson);
-    if (!request) throw new Error(pickMobileCopy(resolvedLocale, { zh: "AI 请求无效。", en: "The AI request is invalid.", pl: "Nieprawidłowe żądanie AI." }));
+    if (!request) throw new Error(getMobileCatalog(resolvedLocale).mobile.ai.invalidRequest);
 
     activeRequestRef.current?.controller.abort();
     const controller = new AbortController();
@@ -65,14 +65,10 @@ export const useMobileSelectionAi = ({
     }).catch((requestError) => {
       if (controller.signal.aborted) return;
       const message = requestError instanceof ApiRequestError && requestError.code === "ai_not_configured"
-        ? pickMobileCopy(resolvedLocale, {
-            zh: "请先在 Web 或桌面端的“模型与代理”中配置模型。",
-            en: "Configure a model in Models and agents on the web or desktop app first.",
-            pl: "Najpierw skonfiguruj model w sekcji Modele i agenci w wersji Web lub desktopowej.",
-          })
+        ? getMobileCatalog(resolvedLocale).mobile.ai.modelNotConfigured
         : requestError instanceof Error
           ? requestError.message
-          : pickMobileCopy(resolvedLocale, { zh: "AI 生成失败。", en: "AI generation failed.", pl: "Generowanie AI nie powiodło się." });
+          : getMobileCatalog(resolvedLocale).mobile.ai.generationFailed;
       safeDomCall(() => editorRef.current?.pushAiStreamEvent(buildMobileAiStreamBridgePayload(request.requestId, {
         type: "error",
         code: "ai_generation_failed",

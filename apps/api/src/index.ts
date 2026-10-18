@@ -45,6 +45,7 @@ import {
   restoreJsonNotebooks as restoreJsonNotebooksService,
 } from "./backup-service";
 import { sha256, sha256Bytes } from "./hash-utils";
+import { PUBLIC_PAGE_HEADERS } from "@edgeever/shared/public-page-headers";
 import { INSTANCE_BUILD_ID } from "./instance-build";
 import { resolveDeploymentVersionCreatedAt, resolveInstanceDeploymentMetadata } from "./instance-deployment";
 import type {
@@ -174,6 +175,16 @@ app.use(
     credentials: true,
   })
 );
+
+// Every anonymous share/form response, including errors, stays out of search
+// indexes and shared caches. Routes may still set a stricter Cache-Control.
+app.use("/api/public/*", async (c, next) => {
+  await next();
+  for (const [name, value] of Object.entries(PUBLIC_PAGE_HEADERS)) {
+    if (name === "Cache-Control" && c.res.headers.has(name)) continue;
+    c.res.headers.set(name, value);
+  }
+});
 
 app.get("/api/release", (c) => c.json(releaseSummary));
 

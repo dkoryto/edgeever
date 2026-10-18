@@ -2620,6 +2620,7 @@ export const zhCN = {
     qrCodeLabel: "分享链接二维码",
     qrCodeHint: "用手机相机扫码即可打开这篇笔记。",
     qrCodeNotebookHint: "用手机相机扫码即可打开这个笔记本。",
+    contentLabel: "分享的笔记内容",
     siteHideContents: "收起目录",
     siteShowContents: "展开目录",
     siteHome: "首页",

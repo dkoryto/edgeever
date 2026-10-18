@@ -143,6 +143,21 @@ describe("production authentication guard", () => {
     });
   });
 
+  test("keeps anonymous share responses out of search indexes, caches and Referer headers", async () => {
+    for (const path of ["/api/public/shares/not-a-token", "/api/public/notebook-shares/not-a-token", "/api/public/forms/not-a-token"]) {
+      const response = await fetchApi(path, {
+        DB: createDatabase({ userId: "owner" }),
+        RESOURCES: {},
+        EDGE_EVER_AUTH_PASSWORD: "configured-secret",
+      });
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive, nosnippet, noimageindex");
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    }
+  });
+
   test("does not misreport transient D1 failures as unapplied migrations", async () => {
     const response = await fetchApi("/api/health", {
       DB: createDatabase({ error: new Error("D1_ERROR: Network connection lost.") }),

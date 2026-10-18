@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { hasBootstrapCredential } from "../apps/api/src/auth-bootstrap.ts";
 import { isUnauthenticatedAccessEnabled } from "../apps/api/src/auth-state.ts";
 import { fetchEdgeEverApp } from "../apps/api/src/index.ts";
+import { isPublicPagePath, PUBLIC_PAGE_HEADERS } from "../packages/shared/src/public-page-headers.ts";
 import { nodePublicFetch } from "../apps/api/src/node-public-network.ts";
 import { createSelfHostedStorageAdapter } from "../apps/api/src/self-hosted-storage-adapter.ts";
 import { resolveSelfHostedConfig } from "./self-hosted-config.mjs";
@@ -143,7 +144,13 @@ const serveStatic = async (request) => {
 
   const index = Bun.file(join(webDirectory, "index.html"));
   return (await index.exists())
-    ? new Response(index, { headers: { "Content-Type": "text/html; charset=utf-8" } })
+    ? new Response(index, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          // Share and form links render the app shell; keep them out of search indexes and caches.
+          ...(isPublicPagePath(url.pathname) ? PUBLIC_PAGE_HEADERS : {}),
+        },
+      })
     : new Response("Web build not found. Run bun run build:web first.", { status: 503 });
 };
 

@@ -1,41 +1,23 @@
 {
-  "version": "1.121.0",
+  "version": "1.123.0",
   "changes": {
     "en-US": [
-      "Add a table context menu with copy and paste for faster editing.",
-      "Refresh note image sharing themes, remember sharing preferences across clients, and add cached fonts with live previews.",
-      "Unify the font catalog for note bodies and posters, improve font selection, and show loading status with retry on failure.",
-      "Open internal note links in the destination notebook so navigation stays consistent.",
-      "Restore desktop connections to WorkBuddy 5.8+ and show actionable reasons when local agent connections fail.",
-      "Fix clearing local desktop data when the app uses an account-specific data directory.",
-      "Keep Android automatic synchronization running after a sync pass fails to settle.",
-      "Prevent the diagram shape menu from blocking editing and create new diagram labels in the interface language.",
-      "Make save status explanations accessible from the keyboard and localize warnings for rejected suspicious overwrites.",
-      "Reduce desktop installation size by excluding development-only files from production packages."
+      "Choose image-sharing fonts from a preview list on Android and iOS, with the current theme font shown clearly.",
+      "Improve shared note images with theme-appropriate typography, clearer rich content, a warm book-excerpt background, and cleaner signatures. New image-sharing preferences use the glass theme and hide the note title by default.",
+      "Fix image exports stalling after navigating between notes on mobile and preserve full-resolution exported image previews on Android.",
+      "Fix Jike Web Clipper captures mixing post content and source links when switching between posts by the same author. Thanks to @sivdead (#614, #615)."
     ],
     "zh-CN": [
-      "新增表格右键菜单，支持复制和粘贴，提升表格编辑效率。",
-      "优化笔记长图分享主题，跨客户端记住分享偏好，并提供带缓存和实时预览的字体选择。",
-      "统一笔记正文与海报字体目录，优化字体选择位置，并显示加载状态、支持失败重试。",
-      "修复笔记内部链接跳转，打开目标笔记时同步切换到所在笔记本。",
-      "恢复桌面端对 WorkBuddy 5.8+ 的连接，并在本地智能体连接失败时显示具体原因。",
-      "修复桌面端使用账户专属数据目录时无法清除本地数据的问题。",
-      "修复 Android 一轮同步收尾失败后自动同步可能停止的问题。",
-      "修复图形菜单阻挡编辑的问题，新建图表标签跟随界面语言。",
-      "保存状态提示支持键盘聚焦查看，并完善可疑覆盖保存被拒绝时的多语言提示。",
-      "桌面安装包排除仅开发时使用的文件，减少安装体积。"
+      "Android 和 iOS 支持通过预览列表选择分享图片字体，并清晰显示当前主题字体。",
+      "优化笔记分享图片的主题字体、内容层次和富文本呈现，书摘主题采用暖纸背景，签名更简洁；新的图片分享偏好默认使用毛玻璃主题并隐藏笔记标题。",
+      "修复移动端切换笔记后图片导出卡住的问题，并保留 Android 导出图片预览的完整分辨率。",
+      "修复即刻网页剪藏在同一作者的帖子之间切换时正文与来源链接错配的问题。感谢 @sivdead（#614、#615）。"
     ],
     "ja": [
-      "表の右クリックメニューでコピーと貼り付けが使えるようになりました。",
-      "ノート画像の共有テーマを改善し、端末間で共有設定を保持。フォントのキャッシュとプレビューに対応しました。",
-      "本文とポスターのフォント一覧を統一し、選択操作と読み込み状況の表示、失敗時の再試行を改善しました。",
-      "内部ノートリンクを開く際に、リンク先のノートブックへ正しく移動するよう修正しました。",
-      "デスクトップ版のWorkBuddy 5.8以降への接続を修正し、ローカルエージェントの接続失敗理由を表示します。",
-      "アカウント別のデータディレクトリを使用する場合に、デスクトップのローカルデータを消去できない問題を修正しました。",
-      "同期の終了処理が失敗した後もAndroidの自動同期が継続するよう修正しました。",
-      "図形メニューが編集を妨げる問題を修正し、新規図表のラベルを画面の言語に合わせます。",
-      "保存状況の説明をキーボードで確認できるようにし、不審な上書き保存の拒否メッセージを多言語化しました。",
-      "開発専用ファイルを除外し、デスクトップのインストール容量を削減しました。"
+      "Android と iOS で、プレビュー一覧から共有画像のフォントを選択でき、現在のテーマのフォントも確認できます。",
+      "ノート共有画像の書体、情報の階層、リッチコンテンツの表示を改善し、書籍抜粋テーマに温かい紙の背景を採用しました。新しい共有設定ではガラステーマを使い、ノートのタイトルを初期状態で非表示にします。",
+      "モバイルでノートを切り替えた後に画像の書き出しが停止する問題を修正し、Android の書き出し画像プレビューの解像度を維持します。",
+      "即刻のウェブクリッパーで、同じ投稿者の投稿を切り替えた際に本文とリンクが一致しない問題を修正しました。@sivdead に感謝します（#614、#615）。"
     ]
   }
 }

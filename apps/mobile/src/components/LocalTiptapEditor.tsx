@@ -88,6 +88,7 @@ import {
   buildImageExportBasename,
   buildNoteImageCardMarkup,
   generateCardCss,
+  prepareNoteImageContent,
 } from "@edgeever/shared/note-image-card";
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from "expo/dom";
 import { toCanvas } from "html-to-image";
@@ -1248,8 +1249,9 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
 
     const notify = (payload: Record<string, unknown>) =>
       onImageExportEventRef.current?.(JSON.stringify({ requestId: request.requestId, ...payload }));
+    const exportStartedAt = performance.now();
     const reportProgress = (stage: "prepare" | "render" | "transfer") => {
-      void Promise.resolve(notify({ type: "progress", stage })).catch(() => {});
+      void Promise.resolve(notify({ type: "progress", stage, elapsedMs: Math.round(performance.now() - exportStartedAt) })).catch(() => {});
     };
     const missingImagePlaceholder = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 
@@ -1269,6 +1271,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
         if (element instanceof HTMLButtonElement) element.remove();
       });
 
+      prepareNoteImageContent(editorClone);
       const bodyHtml = editorClone.innerHTML;
 
       const host = document.createElement("div");
@@ -1284,7 +1287,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
         bodyHtml,
         theme: resolvedTheme,
         fontStyle,
-        showTitle: request.showTitle ?? true,
+        showTitle: request.showTitle ?? false,
         showNotebook: request.showNotebook ?? false,
         showTags: request.showTags ?? false,
         showUpdatedAt: request.showUpdatedAt ?? true,

@@ -44,6 +44,7 @@ import {
   buildImageExportBasename,
   buildNoteImageCardMarkup,
   generateCardCss,
+  prepareNoteImageContent,
   planNativeNoteImageRender,
 } from "@edgeever/shared/note-image-card";
 import { createEdgeEverMathematics } from "@edgeever/shared/mathematics";
@@ -1267,6 +1268,7 @@ async function exportNoteImage(request: ImageExportRequest) {
     if (element instanceof HTMLButtonElement) element.remove();
   });
 
+  prepareNoteImageContent(editorClone);
   const bodyHtml = editorClone.innerHTML;
 
   const host = document.createElement("div");
@@ -1282,7 +1284,7 @@ async function exportNoteImage(request: ImageExportRequest) {
     bodyHtml,
     theme: resolvedTheme,
     fontStyle,
-    showTitle: request.showTitle ?? true,
+    showTitle: request.showTitle ?? false,
     showNotebook: request.showNotebook ?? false,
     showTags: request.showTags ?? false,
     showUpdatedAt: request.showUpdatedAt ?? true,
@@ -1437,7 +1439,9 @@ const api: EdgeEverEditorAPI = {
     const modeChanged = nextMode !== mode;
     mode = nextMode;
     locale = opts.locale === "en-US" || opts.locale === "ja" || opts.locale === "pl" ? opts.locale : "zh-CN";
-    editor.setEditable(mode === "editor");
+    // Configuring a reused WebView is not a document edit. TipTap otherwise emits
+    // an update for its old (often empty) body before native pushes the share seed.
+    editor.setEditable(mode === "editor", false);
     setToolbarVisible(mode === "editor");
     document.documentElement.dataset.theme = opts.theme || "light";
     document.body.classList.toggle("viewer-mode", mode === "viewer");

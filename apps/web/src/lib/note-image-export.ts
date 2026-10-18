@@ -25,6 +25,7 @@ import {
   buildNoteImageCardMarkup,
   estimateReadingStats,
   generateCardCss,
+  prepareNoteImageContent,
 } from "@edgeever/shared/note-image-card";
 
 export {
@@ -221,6 +222,9 @@ export const createNoteImage = async ({
   const themeCfg = NOTE_IMAGE_THEMES[resolvedTheme];
 
   const prepared = await prepareNoteBodyHtmlForExport(bodyHtml);
+  const exportContent = document.createElement("div");
+  exportContent.innerHTML = prepared.bodyHtml;
+  prepareNoteImageContent(exportContent);
   onFontLoadStatus?.("loading");
   const assets = await prepareNoteImageAssets({ theme: resolvedTheme, fontStyle, text: [title, notebook, ...(tags || []), updatedAt, author, readingTimeText, prepared.bodyHtml].join(" "), urls: noteImageAssetUrls })
     .then(result => { onFontLoadStatus?.("ready"); return result; })
@@ -250,7 +254,7 @@ export const createNoteImage = async ({
       notebook,
       tags,
       updatedAt,
-      bodyHtml: prepared.bodyHtml,
+      bodyHtml: exportContent.innerHTML,
       theme: resolvedTheme,
       fontStyle,
       showTitle,

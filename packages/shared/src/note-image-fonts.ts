@@ -1,14 +1,9 @@
 import { NOTE_IMAGE_FONT_NOTICES } from "./note-image-font-notices";
 import { NOTE_IMAGE_FONT_SUBSETS } from "./note-image-font-manifest";
-import { resolveTheme, type NoteImageTheme, type NoteImageFontStyle } from "./note-image-card";
+import { NOTE_IMAGE_TEMPLATE_TYPOGRAPHY, resolveTheme, type NoteImageTheme, type NoteImageFontStyle } from "./note-image-card";
 import { isRemoteNoteImageFont } from "./font-catalog";
 import { fontSubsetContains, loadCatalogFont } from "./font-loader";
 export { fontSubsetContains, createRemoteFontResourceLoader, loadRemoteFontResource } from "./font-loader";
-
-export const NOTE_IMAGE_THEME_FONTS = {
-  gradient: "puhui", glass: "puhui", quote: "mincho", book: "song", memo: "misans",
-  bento: "puhui", "black-sun": "puhui", frame: "puhui", handwritten: "longcang", code: "geist",
-} as const;
 
 type AssetUrl = string | number | { uri: string };
 const resources = new Map<string, Promise<string>>();
@@ -55,7 +50,11 @@ export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, 
   };
   const points = new Set(Array.from(text, char => char.codePointAt(0)!));
   const remote = isRemoteNoteImageFont(fontStyle);
-  const catalog = !remote && fontStyle === "auto" ? NOTE_IMAGE_FONT_SUBSETS[NOTE_IMAGE_THEME_FONTS[active]] : [];
+  const preset = NOTE_IMAGE_TEMPLATE_TYPOGRAPHY[active];
+  const fontIds = [...new Set([...preset.body, ...preset.heading])];
+  const catalog = !remote && fontStyle === "auto"
+    ? fontIds.flatMap(id => [...NOTE_IMAGE_FONT_SUBSETS[id]])
+    : [];
   const blocks = catalog.filter(block => fontSubsetContains(block.range, points));
   const fontFacesCss = (await Promise.all(blocks.map(async block => {
     let loaded = loadedFaces.get(block.asset);
@@ -76,6 +75,8 @@ export const prepareNoteImageAssets = async ({ theme, fontStyle = "auto", text, 
     : embed && blocks.length ? `/*! ${NOTE_IMAGE_FONT_NOTICES.replaceAll("*/", "* /")} */\n${fontFacesCss}` : "";
   const textureCss = embed && active === "handwritten"
     ? `.edgeever-image-wrapper{--ee-paper:url("${await getAsset("paper.png")}");--ee-paper-grain:url("${await getAsset("paper-text.png")}")}`
+    : embed && active === "book"
+    ? `.edgeever-image-wrapper{--ee-paper:url("${await getAsset("paper.png")}")}`
     : "";
   return { fontCss, css: `${fontCss}\n${textureCss}` };
 };

@@ -2,6 +2,7 @@ import type { FontLoadStatus } from "@/lib/font-load-state";
 import { useFontPreviewStatus } from "@/lib/use-font-preview-status";
 import { FontLoadFeedback } from "@/components/FontLoadFeedback";
 import { FONT_CATALOG, FONT_IDS } from "@edgeever/shared/font-catalog";
+import { updateNoteImagePreference } from "@edgeever/shared/note-image-preferences";
 import { prepareNoteImageAssets } from "@edgeever/shared/note-image-fonts";
 import { noteImageAssetUrls } from "@edgeever/shared/note-image-assets";
 import { Check, Copy, Download, LoaderCircle, Palette, Share2, Type } from "lucide-react";
@@ -30,7 +31,7 @@ import {
   type NoteImageTheme,
   type PreparedNoteImage,
 } from "@/lib/note-image-export";
-import { NOTE_IMAGE_THEME_OPTIONS, buildNoteImageCardMarkup, escapeCardHtml, generateCardCss } from "@edgeever/shared/note-image-card";
+import { NOTE_IMAGE_BUNDLED_FONTS, NOTE_IMAGE_TEMPLATE_TYPOGRAPHY, resolveTheme, NOTE_IMAGE_THEME_OPTIONS, buildNoteImageCardMarkup, escapeCardHtml, generateCardCss } from "@edgeever/shared/note-image-card";
 import { getHtmlImageEmbedNoticeKind } from "@/lib/note-html-export";
 import { readNoteImagePreferences, writeNoteImagePreferences, type NoteImagePreferences } from "@/lib/note-image-preference";
 import { cn } from "@/lib/utils";
@@ -134,7 +135,7 @@ export const ShareNoteImageDialog = ({
     showUpdatedAt, showReadingTime, showAuthor, author, showBranding,
   } = preferences;
   const setPreference = <K extends keyof NoteImagePreferences>(key: K, value: NoteImagePreferences[K]) => {
-    setPreferences(current => ({ ...current, [key]: value }));
+    setPreferences(current => updateNoteImagePreference(current, key, value));
   };
 
   useEffect(() => {
@@ -147,6 +148,16 @@ export const ShareNoteImageDialog = ({
   const [retry, setRetry] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied" | "failed">("idle");
   const [contentFontStatus, setContentFontStatus] = useState<FontLoadStatus>("loading");
+  const themeFontLabel = NOTE_IMAGE_TEMPLATE_TYPOGRAPHY[resolveTheme(undefined, theme)].body
+    .map(font => t(NOTE_IMAGE_BUNDLED_FONTS[font].labelKey))
+    .join(" / ");
+  const selectedFontLabel = fontStyle === "auto"
+    ? themeFontLabel
+    : t(FONT_OPTIONS.find(item => item.id === fontStyle)!.labelKey);
+  const fontOptionLabel = (item: (typeof FONT_OPTIONS)[number]) => item.id === "auto"
+    ? `${t(item.labelKey)} (${themeFontLabel})`
+    : t(item.labelKey);
+
   const { status: selectedFontStatus, onPreviewStatus } = useFontPreviewStatus(`${fontStyle}:${theme}:${retry}`, contentFontStatus);
   const generationRef = useRef(0);
   const copyAttemptRef = useRef(0);
@@ -333,7 +344,7 @@ export const ShareNoteImageDialog = ({
                     >
                       <NoteImageThemePreview
                         theme={id}
-                        fontStyle={fontStyle}
+                        fontStyle="auto"
                         title={source.title || label}
                         body={t("editor.imageShare.previewBody")}
                         quote={t("editor.imageShare.previewQuote")}
@@ -357,13 +368,13 @@ export const ShareNoteImageDialog = ({
               <Select value={fontStyle} onOpenChange={setFontMenuOpen} onValueChange={(value) => setPreference("fontStyle", value as NoteImageFontStyle)}>
                 <SelectTrigger aria-label={t("editor.imageShare.fontStyle")} className="h-9 w-full text-xs font-normal">
                   <SelectValue>
-                    <NoteImageFontLabel label={t(FONT_OPTIONS.find(item => item.id === fontStyle)!.labelKey)} fontStyle={fontStyle} theme={theme} enabled={open} status={error === true ? undefined : selectedFontStatus} onStatusChange={onPreviewStatus} retryKey={retry} />
+                    <NoteImageFontLabel label={selectedFontLabel} fontStyle={fontStyle} theme={theme} enabled={open} status={error === true ? undefined : selectedFontStatus} onStatusChange={onPreviewStatus} retryKey={retry} />
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {FONT_OPTIONS.map((item) => (
-                    <SelectItem key={item.id} value={item.id} textValue={t(item.labelKey)}>
-                      <NoteImageFontLabel label={t(item.labelKey)} fontStyle={item.id} theme={theme} enabled={open && fontMenuOpen} visibleOnly />
+                    <SelectItem key={item.id} value={item.id} textValue={fontOptionLabel(item)}>
+                      <NoteImageFontLabel label={fontOptionLabel(item)} fontStyle={item.id} theme={theme} enabled={open && fontMenuOpen} visibleOnly />
                     </SelectItem>
                   ))}
                 </SelectContent>

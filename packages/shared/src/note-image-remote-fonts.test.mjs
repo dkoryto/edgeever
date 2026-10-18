@@ -16,7 +16,10 @@ test('all downloadable fonts retain their choice and use a private family withou
     expect(remoteFontCssUrl(font)).toMatch(/@(?:\d+\.\d+\.\d+|[a-f0-9]{40})\//);
   }
   // Explicit system styles must not fetch any optional font manifest or file.
-  expect((await prepareNoteImageAssets({ theme: 'book', fontStyle: 'sans', text: '中文', urls: {} })).fontCss).toBe('');
+  const paper = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+  const assets = await prepareNoteImageAssets({ theme: 'book', fontStyle: 'sans', text: '中文', urls: { 'paper.png': paper } });
+  expect(assets.fontCss).toBe('');
+  expect(assets.css).toContain(`--ee-paper:url("${paper}")`);
 });
 
 test('contains the entire five-font designer pack and keeps restricted fonts as original full files', () => {

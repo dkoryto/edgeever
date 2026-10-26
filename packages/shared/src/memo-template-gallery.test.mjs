@@ -6,7 +6,7 @@ import {
 } from "./memo-template-gallery.ts";
 import { DEFAULT_MEMO_TEMPLATE_SEEDS } from "./memo-template-seeds.ts";
 
-const locales = ["zh-CN", "en-US", "ja", "pl"];
+const locales = ["zh-CN", "en-US", "ja", "pl", "ru"];
 
 describe("memo template gallery", () => {
   test("offers unique templates that do not overlap the default seeds", () => {

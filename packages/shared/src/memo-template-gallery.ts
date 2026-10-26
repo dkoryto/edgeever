@@ -30,10 +30,11 @@ const item = (
   enUS: MemoTemplateSeedTranslation,
   ja: MemoTemplateSeedTranslation,
   pl: MemoTemplateSeedTranslation,
+  ru: MemoTemplateSeedTranslation,
 ): MemoTemplateGalleryItem => ({
   key,
   tag: key,
-  translations: { "zh-CN": zhCN, "en-US": enUS, ja, pl },
+  translations: { "zh-CN": zhCN, "en-US": enUS, ja, pl, ru },
 });
 
 export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
@@ -59,6 +60,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       description: "Zaplanuj priorytety dnia, zapisz, co się wydarzyło, i podsumuj dzień wieczorem.",
       contentMarkdown: "## 🎯 Trzy priorytety na dziś\n\n1. \n2. \n3. \n\n## 📅 Przebieg dnia\n\n- \n\n## 🙏 Wdzięczność\n\n- \n\n## 🌙 Refleksja\n\n- Co poszło dobrze:\n- Co poprawić:\n- Na jutro:\n",
     },
+    {
+      title: "Ежедневный дневник",
+      description: "Определите приоритеты дня, запишите, что произошло, и подведите итоги вечером.",
+      contentMarkdown: "## 🎯 Три главных дела на сегодня\n\n1. \n2. \n3. \n\n## 📅 Записи за день\n\n- \n\n## 🙏 Благодарность\n\n- \n\n## 🌙 Итоги дня\n\n- Что получилось:\n- Что улучшить:\n- На завтра:\n",
+    },
   ),
   item(
     "retrospective",
@@ -81,6 +87,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       title: "Retrospektywa",
       description: "Podsumuj okres pracy: co poszło dobrze, co nie i jakie konkretne usprawnienia wprowadzić.",
       contentMarkdown: "# 🔁 Retrospektywa\n\n- **Okres**:\n- **Uczestnicy**:\n\n## ✅ Co poszło dobrze\n\n- \n\n## ⚠️ Co nie zadziałało\n\n- \n\n## 💡 Co warto wypróbować\n\n- \n\n## 📋 Działania\n\n- [ ] **[Osoba odpowiedzialna]** Działanie (Termin: DD.MM)\n",
+    },
+    {
+      title: "Ретроспектива",
+      description: "Оглянитесь на период: что получилось, что нет и какие конкретные улучшения внести.",
+      contentMarkdown: "# 🔁 Ретроспектива\n\n- **Период**:\n- **Участники**:\n\n## ✅ Что получилось\n\n- \n\n## ⚠️ Что не получилось\n\n- \n\n## 💡 Что попробовать\n\n- \n\n## 📋 Действия\n\n- [ ] **[Ответственный]** Действие (Срок: ММ-ДД)\n",
     },
   ),
   item(
@@ -105,6 +116,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       description: "Zapisuj tematy rozmowy 1:1, wzajemny feedback, ustalenia i dalsze kroki.",
       contentMarkdown: "# 🤝 Rozmowa 1:1\n\n- **Data**:\n- **Z kim**:\n\n## 🗂️ Tematy\n\n- \n\n## 💬 Feedback\n\n- Przekazany:\n- Otrzymany:\n\n## ✅ Ustalenia\n\n- \n\n## 📋 Dalsze kroki\n\n- [ ] \n",
     },
+    {
+      title: "Встреча 1:1",
+      description: "Темы встречи 1:1, взаимная обратная связь, договорённости и следующие шаги.",
+      contentMarkdown: "# 🤝 Встреча 1:1\n\n- **Дата**:\n- **С кем**:\n\n## 🗂️ Темы\n\n- \n\n## 💬 Обратная связь\n\n- Дал(а):\n- Получил(а):\n\n## ✅ Договорённости\n\n- \n\n## 📋 Следующие шаги\n\n- [ ] \n",
+    },
   ),
   item(
     "project-plan",
@@ -127,6 +143,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       title: "Plan projektu",
       description: "Określ cele projektu, zakres, kamienie milowe, ryzyka i interesariuszy.",
       contentMarkdown: "# 🗺️ Plan projektu\n\n- **Właściciel**:\n- **Start / termin**:\n\n## 🎯 Cele\n\n- \n\n## 📦 Zakres\n\n- W zakresie:\n- Poza zakresem:\n\n## 🏁 Kamienie milowe\n\n- [ ] Kamień milowy 1 (DD.MM)\n- [ ] Kamień milowy 2 (DD.MM)\n\n## ⚠️ Ryzyka i sposoby ograniczenia\n\n- \n\n## 👥 Interesariusze\n\n- \n",
+    },
+    {
+      title: "План проекта",
+      description: "Опишите цели проекта, его рамки, вехи, риски и заинтересованных лиц.",
+      contentMarkdown: "# 🗺️ План проекта\n\n- **Ответственный**:\n- **Начало / Срок**:\n\n## 🎯 Цели\n\n- \n\n## 📦 Рамки\n\n- Входит:\n- Не входит:\n\n## 🏁 Вехи\n\n- [ ] Веха 1 (ММ-ДД)\n- [ ] Веха 2 (ММ-ДД)\n\n## ⚠️ Риски и меры\n\n- \n\n## 👥 Заинтересованные лица\n\n- \n",
     },
   ),
   item(
@@ -151,6 +172,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       description: "Porządkuj naukę w trzech częściach: pytania kluczowe, notatki i podsumowanie.",
       contentMarkdown: "# 🎓 Notatka Cornella\n\n- **Temat**:\n- **Źródło**:\n\n## ❓ Pytania kluczowe\n\n- \n\n## 📝 Notatki\n\n- \n\n## 🧾 Podsumowanie\n\n\n",
     },
+    {
+      title: "Корнелльские заметки",
+      description: "Разложите изученное на ключевые вопросы, заметки и краткий итог.",
+      contentMarkdown: "# 🎓 Корнелльские заметки\n\n- **Тема**:\n- **Источник**:\n\n## ❓ Ключевые вопросы\n\n- \n\n## 📝 Заметки\n\n- \n\n## 🧾 Итог\n\n\n",
+    },
   ),
   item(
     "bug-report",
@@ -173,6 +199,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       title: "Raport błędu",
       description: "Zapisz kroki odtworzenia, oczekiwany i faktyczny wynik, środowisko oraz dodatkowy kontekst.",
       contentMarkdown: "# 🐞 Raport błędu\n\n## 📄 Opis\n\n\n\n## 🔁 Kroki odtworzenia\n\n1. \n2. \n3. \n\n## ✅ Oczekiwany wynik\n\n\n\n## ❌ Faktyczny wynik\n\n\n\n## 🖥️ Środowisko\n\n- Wersja:\n- System / przeglądarka:\n\n## 📎 Dodatkowy kontekst\n\n- \n",
+    },
+    {
+      title: "Отчёт об ошибке",
+      description: "Зафиксируйте шаги воспроизведения, ожидаемый и фактический результат, окружение и контекст.",
+      contentMarkdown: "# 🐞 Отчёт об ошибке\n\n## 📄 Кратко\n\n\n\n## 🔁 Шаги воспроизведения\n\n1. \n2. \n3. \n\n## ✅ Ожидаемый результат\n\n\n\n## ❌ Фактический результат\n\n\n\n## 🖥️ Окружение\n\n- Версия:\n- ОС / браузер:\n\n## 📎 Дополнительно\n\n- \n",
     },
   ),
   item(
@@ -197,6 +228,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       description: "Opisz kontekst, rozważane opcje, podjętą decyzję i jej konsekwencje.",
       contentMarkdown: "# ⚖️ Rejestr decyzji\n\n- **Data**:\n- **Status**: Proponowana / Przyjęta / Zastąpiona\n- **Decyzja podjęta przez**:\n\n## 🧭 Kontekst\n\n\n\n## 🔀 Rozważane opcje\n\n1. **Opcja A**:\n   - Zalety:\n   - Wady:\n2. **Opcja B**:\n   - Zalety:\n   - Wady:\n\n## ✅ Decyzja\n\n\n\n## 📈 Konsekwencje\n\n- \n",
     },
+    {
+      title: "Запись решения",
+      description: "Задокументируйте контекст, рассмотренные варианты, принятое решение и его последствия.",
+      contentMarkdown: "# ⚖️ Запись решения\n\n- **Дата**:\n- **Статус**: Предложено / Принято / Заменено\n- **Кто решил**:\n\n## 🧭 Контекст\n\n\n\n## 🔀 Рассмотренные варианты\n\n1. **Вариант A**:\n   - Плюсы:\n   - Минусы:\n2. **Вариант B**:\n   - Плюсы:\n   - Минусы:\n\n## ✅ Решение\n\n\n\n## 📈 Последствия\n\n- \n",
+    },
   ),
   item(
     "travel-checklist",
@@ -219,6 +255,11 @@ export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [
       title: "Lista podróży",
       description: "Zbierz w jednym miejscu plan podróży, rezerwacje, listę pakowania i sprawy do załatwienia przed wyjazdem.",
       contentMarkdown: "# ✈️ Lista podróży\n\n- **Cel podróży**:\n- **Termin**:\n\n## 🗓️ Plan\n\n- Dzień 1:\n- Dzień 2:\n\n## 🎫 Rezerwacje\n\n- Transport:\n- Nocleg:\n\n## 🧳 Lista pakowania\n\n- [ ] Dokumenty\n- [ ] Ładowarki\n- [ ] Ubrania\n- [ ] Kosmetyki\n- [ ] Leki\n\n## ✅ Przed wyjazdem\n\n- [ ] \n",
+    },
+    {
+      title: "Чек-лист поездки",
+      description: "Маршрут, бронирования, список вещей и дела перед отъездом в одном месте.",
+      contentMarkdown: "# ✈️ Чек-лист поездки\n\n- **Куда**:\n- **Даты**:\n\n## 🗓️ Маршрут\n\n- День 1:\n- День 2:\n\n## 🎫 Бронирования\n\n- Транспорт:\n- Жильё:\n\n## 🧳 Список вещей\n\n- [ ] Документы\n- [ ] Зарядки\n- [ ] Одежда\n- [ ] Средства гигиены\n- [ ] Лекарства\n\n## ✅ Перед отъездом\n\n- [ ] \n",
     },
   ),
 ];

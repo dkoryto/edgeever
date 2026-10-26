@@ -817,9 +817,9 @@ const polishTemplateTranslations = [
   ...mobilePolishTemplateTranslations,
   ...plTranslationPairs.filter((pair) => pair.pattern),
 ].sort((left, right) => right.source.length - left.source.length);
-const russianTemplateTranslations = [
-  ...ruTranslationPairs.filter((pair) => pair.pattern),
-].sort((left, right) => right.source.length - left.source.length);
+const russianTemplateTranslations = ruTranslationPairs
+  .filter((pair) => pair.pattern)
+  .sort((left, right) => right.source.length - left.source.length);
 
 type LocalizedCatalog<T> = { readonly [K in keyof T]: T[K] extends string ? string : LocalizedCatalog<T[K]> };
 export type MobileCatalog = LocalizedCatalog<typeof enUS>;

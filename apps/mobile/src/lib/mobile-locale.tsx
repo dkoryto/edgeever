@@ -801,9 +801,9 @@ const polishTemplateTranslations = [
   ...mobilePolishTemplateTranslations,
   ...plTranslationPairs.filter((pair) => pair.pattern),
 ].sort((left, right) => right.source.length - left.source.length);
-const russianTemplateTranslations = [
-  ...ruTranslationPairs.filter((pair) => pair.pattern),
-].sort((left, right) => right.source.length - left.source.length);
+const russianTemplateTranslations = ruTranslationPairs
+  .filter((pair) => pair.pattern)
+  .sort((left, right) => right.source.length - left.source.length);
 
 const resolveSystemLocale = (): SupportedMobileLocale =>
   resolveSupportedLocale(Intl.DateTimeFormat().resolvedOptions().locale);

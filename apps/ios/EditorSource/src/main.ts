@@ -13,6 +13,7 @@ import mermaid from "mermaid";
 import { toCanvas } from "html-to-image";
 import {
   createEdgeEverDocumentExtensions,
+  applyImageAlignment,
   createNativeUnsupportedContentExtensions,
   DETAILS_EDITOR_CSS,
   diagramDocumentToX6Cells,
@@ -73,9 +74,12 @@ type BridgeMessage =
   | { type: "pickImage" }
   | { type: "searchResult"; count: number; index: number }
   | { type: "readerScroll"; collapsed: boolean }
+  | { type: "imageExportFontStatus"; requestId: string; status: "loading" | "fallback" | "ready" }
+  | { type: "imageExportFontsReady"; requestId: string }
   | { type: "imageExportChunk"; requestId: string; chunk: string }
   | {
       type: "imageExportComplete";
+      fontFallback: boolean;
       requestId: string;
       filename: string;
       mimeType: string;
@@ -404,7 +408,7 @@ function clampImageWidth(n: number): number {
  * with the picture — otherwise WKWebView keeps a full-width slot and paints
  * a pale selection wash in the empty half.
  */
-function applyFigureWidth(el: HTMLElement, width: number | null) {
+function applyFigureWidth(el: HTMLElement, width: number | null, alignment?: unknown) {
   const w = width == null ? null : clampImageWidth(width);
   if (w == null) {
     el.style.removeProperty("width");
@@ -412,6 +416,7 @@ function applyFigureWidth(el: HTMLElement, width: number | null) {
     el.style.removeProperty("--ee-image-width");
     delete el.dataset.width;
     el.classList.remove("has-width");
+    applyImageAlignment(el, alignment);
     return;
   }
   const pct = `${w}%`;
@@ -425,6 +430,7 @@ function applyFigureWidth(el: HTMLElement, width: number | null) {
   el.style.setProperty("margin-right", "auto");
   el.style.setProperty("box-sizing", "border-box");
   el.style.setProperty("display", "block");
+  applyImageAlignment(el, alignment);
 }
 
 /**
@@ -530,7 +536,7 @@ function createEdgeEverImageExtension() {
             /* keep markup update even if selection fails */
           }
           ed.view.dispatch(tr);
-          applyFigureWidth(wrapper, nextWidth);
+          applyFigureWidth(wrapper, nextWidth, currentNode.attrs.alignment);
           setActiveWidth(nextWidth);
         };
 
@@ -657,7 +663,7 @@ function createEdgeEverImageExtension() {
           const alt = String(attrs.alt ?? "");
           image.alt = alt;
           const width = parseImageWidth(attrs.width);
-          applyFigureWidth(wrapper, width);
+          applyFigureWidth(wrapper, width, attrs.alignment);
           setActiveWidth(width);
           const src = String(attrs.src ?? "");
           const rid = getResourceIdFromHref(src);
@@ -725,7 +731,7 @@ function createEdgeEverImageExtension() {
               loadImage(updated.attrs as Record<string, unknown>);
             } else {
               setActiveWidth(parseImageWidth(updated.attrs.width));
-              applyFigureWidth(wrapper, parseImageWidth(updated.attrs.width));
+              applyFigureWidth(wrapper, parseImageWidth(updated.attrs.width), updated.attrs.alignment);
             }
             return true;
           },
@@ -737,7 +743,7 @@ function createEdgeEverImageExtension() {
               parseImageWidth(
                 (ed.state.selection as { node?: { attrs?: { width?: unknown } } }).node?.attrs?.width
               ) ?? parseImageWidth(wrapper.dataset.width) ?? parseImageWidth(currentNode.attrs.width);
-            applyFigureWidth(wrapper, selWidth);
+            applyFigureWidth(wrapper, selWidth, currentNode.attrs.alignment);
             // Width bar only in editor when the image is the active node selection.
             if (ed.isEditable && mode === "editor" && !image.hidden) {
               sizeControls.hidden = false;
@@ -1301,7 +1307,10 @@ async function exportNoteImage(request: ImageExportRequest) {
   document.body.appendChild(host);
 
   try {
+    post({ type: "imageExportFontStatus", requestId: request.requestId, status: "loading" });
     const assets = await prepareNoteImageAssets({ theme: resolvedTheme, fontStyle, text: [request.title, request.notebook, ...(request.tags || []), request.updatedAt, bodyHtml].join(" "), urls: noteImageAssetUrls });
+    post({ type: "imageExportFontStatus", requestId: request.requestId, status: assets.fontFallback ? "fallback" : "ready" });
+    void assets.fontsReady?.then(() => post({ type: "imageExportFontsReady", requestId: request.requestId }), () => {});
     style.textContent = assets.css + generateCardCss({ theme: resolvedTheme, fontStyle, fontSize, cardWidth });
     const images = Array.from(documentRoot.querySelectorAll<HTMLImageElement>("img"));
     await Promise.race([
@@ -1392,6 +1401,7 @@ async function exportNoteImage(request: ImageExportRequest) {
     }
     post({
       type: "imageExportComplete",
+      fontFallback: assets.fontFallback,
       requestId: request.requestId,
       filename,
       mimeType,

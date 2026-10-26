@@ -120,12 +120,14 @@ import {
 } from "./user-routes";
 import { registerNotebookRoutes } from "./notebook-routes";
 import { registerNotebookShareRoutes, registerPublicNotebookShareRoutes } from "./notebook-share-routes";
+import { isNotebookSitePagePath, renderNotebookSitePage } from "./notebook-site-page";
 import { registerMemoShareRoutes, registerPublicShareRoutes } from "./share-routes";
 import { registerPublicTableFormRoutes, registerTableFormRoutes } from "./table-form-routes";
 import {
   deleteStoredObjects,
   getActiveObjectStorageConfig,
 } from "./object-storage";
+import { ensureWorkspaceExampleSeed } from "./workspace-example-seed";
 import {
   DEFAULT_WORKSPACE_ID,
   ensureUserWorkspace,
@@ -304,6 +306,9 @@ app.use("/api/v1/*", async (c, next) => {
       workspaceId: DEFAULT_WORKSPACE_ID,
       role: "owner",
     });
+    await ensureWorkspaceExampleSeed(c.env, DEFAULT_WORKSPACE_ID).catch((error) => {
+      console.error("EdgeEver example seed failed", error);
+    });
     await next();
     return;
   }
@@ -454,6 +459,10 @@ export const fetchEdgeEverApp = async (
 
 const worker = {
   async fetch(request: Request, env: WorkerBindings, ctx: ExecutionContext) {
+    if (isNotebookSitePagePath(new URL(request.url).pathname)) {
+      return (await renderNotebookSitePage(request, createCloudflareStorageAdapter(env).db,
+        () => env.ASSETS.fetch(new Request(new URL("/", request.url), { method: "GET" }))))!;
+    }
     return fetchEdgeEverApp(request, {
       ...env,
       storage: createCloudflareStorageAdapter(env),

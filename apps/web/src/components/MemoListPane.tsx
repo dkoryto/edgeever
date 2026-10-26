@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { MemoCard } from "./MemoCard";
+import { MemoNotebookSites } from "./MemoNotebookSites";
 import { ClipboardCopyNotice } from "./ClipboardCopyNotice";
 import { WeChatCopyProgress } from "./WeChatCopyProgress";
 import { cn } from "@/lib/utils";
@@ -901,15 +902,7 @@ export const MemoListPane = ({
   };
 
   const openMemoContextMenuAt = (memo: MemoSummary, clientX: number, clientY: number) => {
-    const menuWidth = 224;
-    // Keep enough room for the full action list. Radix can still adjust the
-    // final position, but this prevents the initial placement from starting
-    // below the viewport on short or zoomed desktop viewports.
-    const menuHeight = view === "trash" ? 216 : 392;
-    const x = Math.min(clientX, Math.max(12, window.innerWidth - menuWidth - 12));
-    const y = Math.min(clientY, Math.max(12, window.innerHeight - menuHeight - 12));
-
-    setMemoContextMenu({ memo, x, y });
+    setMemoContextMenu({ memo, x: clientX, y: clientY });
   };
 
   const handleOpenMemoContextMenu = (memo: MemoSummary, event: MouseEvent<HTMLElement>) => {
@@ -1525,12 +1518,18 @@ export const MemoListPane = ({
         <div style={{ position: "fixed", left: memoContextMenu.x, top: memoContextMenu.y, zIndex: 100 }}>
           <DropdownMenu modal={false} open={true} onOpenChange={(open) => { if (!open) setMemoContextMenu(null); }}>
             <DropdownMenuTrigger asChild>
-              <span className="sr-only" />
+              <span className="block h-0 w-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
+              // A side anchor lets Radix shift the full menu vertically using
+              // its measured height, even when neither side of the click fits.
+              side="right"
+              sideOffset={0}
               align="start"
+              sticky="always"
+              collisionPadding={12}
               onCloseAutoFocus={(event) => event.preventDefault()}
-              className="max-h-[calc(100dvh-1.5rem)] w-56 max-w-[calc(100vw-1.5rem)] overflow-y-auto bg-card border border-slate-200 rounded-md py-1 shadow-md duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none"
+              className="max-h-[min(calc(100dvh-1.5rem),var(--radix-dropdown-menu-content-available-height))] w-56 max-w-[calc(100vw-1.5rem)] overflow-y-auto bg-card border border-slate-200 rounded-md py-1 shadow-md duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none"
               data-memo-actions-menu
             >
               <DropdownMenuItem
@@ -1613,7 +1612,7 @@ export const MemoListPane = ({
                       <Folder className="h-4 w-4" />
                       <span className="min-w-0 flex-1 truncate">{t("memoList.moveToNotebook")}</span>
                     </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="max-h-64 w-56 overflow-y-auto">
+                    <DropdownMenuSubContent collisionPadding={12} sticky="always" className="max-h-[min(16rem,var(--radix-dropdown-menu-content-available-height))] w-56 overflow-y-auto">
                       {moveNotebookOptions.map((option) => (
                         <DropdownMenuItem
                           key={option.id}
@@ -1658,6 +1657,7 @@ export const MemoListPane = ({
                     {contextShareQuery.data?.share ? <Globe className="h-4 w-4 text-slate-950" /> : <Share2 className="h-4 w-4 text-slate-500" />}
                     {t(isLocalMemoId(memoContextMenu.memo.id) ? "sharing.afterSync" : contextShareQuery.data?.share ? "sharing.manage" : "sharing.action")}
                   </DropdownMenuItem>
+                  {!isLocalMemoId(memoContextMenu.memo.id) && <MemoNotebookSites key={memoContextMenu.memo.id} memoId={memoContextMenu.memo.id} presentation="menu" />}
                   {!memoContextMenu.memo.diagramKind && !memoContextMenu.memo.structuredTable && !memoContextMenu.memo.infographic && !memoContextMenu.memo.poster && (
                     <DropdownMenuItem
                       className="flex h-9 w-full items-center gap-2 px-3 text-left text-xs text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"

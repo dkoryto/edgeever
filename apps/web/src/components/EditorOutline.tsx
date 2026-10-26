@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
 import { ChevronDown, ChevronRight, ListTree } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -10,10 +11,15 @@ import { EDITOR_OUTLINE_WIDTH } from "@/lib/workspace-ui";
 type EditorOutlineProps = {
   editor: Editor | null;
   scrollContainer: HTMLDivElement | null;
+  // Non-scrolling slot at the editor pane's top-right. The collapsed button
+  // portals here so it stays put while the note scrolls.
+  collapsedAnchor: HTMLElement | null;
   collapsed: boolean;
   shortcutLabel: string;
   onCollapsedChange: (collapsed: boolean) => void;
 };
+
+const OUTLINE_INDENT = 12;
 
 const stripLeadingEmoji = (str: string): string => {
   const leadingEmojiRegex = /^(?:(?:[\u0030-\u0039#*]\uFE0F?\u20E3|\p{Extended_Pictographic}|[\u2460-\u24FF\u2600-\u27BF\u2B00-\u2BFF])[\uFE00-\uFE0F\u200D]*\s*)+/u;
@@ -47,7 +53,7 @@ const sameOutlineItems = (left: OutlineItem[], right: OutlineItem[]) =>
     return other?.level === item.level && other.pos === item.pos && other.text === item.text;
   });
 
-export const EditorOutline = ({ editor, scrollContainer, collapsed, shortcutLabel, onCollapsedChange }: EditorOutlineProps) => {
+export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collapsed, shortcutLabel, onCollapsedChange }: EditorOutlineProps) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<OutlineItem[]>([]);
   const [activePos, setActivePos] = useState<number | null>(null);
@@ -203,16 +209,12 @@ export const EditorOutline = ({ editor, scrollContainer, collapsed, shortcutLabe
           <li key={item.pos}>
             <div
               className={cn(
-                "group flex min-h-8 items-center rounded-[6px] pr-2 text-[12px] leading-5 transition-colors duration-150",
+                "relative group flex min-h-8 items-center rounded-[6px] pr-2 text-[12px] leading-5 transition-colors duration-150",
                 isActive
                   ? "bg-slate-100 text-slate-900"
                   : "text-slate-700 hover:bg-slate-50/70 hover:text-slate-900"
               )}
-              style={{
-                marginLeft: `${depth * -24}px`,
-                paddingLeft: `${depth * 24}px`,
-                width: `calc(100% + ${depth * 24}px)`,
-              }}
+              style={{ paddingLeft: depth * OUTLINE_INDENT }}
             >
               {hasChildren ? (
                 <Tooltip>
@@ -248,7 +250,12 @@ export const EditorOutline = ({ editor, scrollContainer, collapsed, shortcutLabe
             </div>
 
             {hasChildren && !itemCollapsed && (
-              <div className="ml-3 border-l border-slate-200/90 pl-3">
+              <div className="relative">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 border-l border-slate-200/90"
+                  style={{ left: `calc(${depth * OUTLINE_INDENT}px + 0.75rem)` }}
+                />
                 {renderItems(item.children, depth + 1)}
               </div>
             )}
@@ -264,17 +271,18 @@ export const EditorOutline = ({ editor, scrollContainer, collapsed, shortcutLabe
 
   const outlineToggleLabel = `${t(collapsed ? "editor.showOutline" : "editor.hideOutline")} (${shortcutLabel})`;
 
-  return (
+  const outline = (
     <TooltipProvider delayDuration={350} skipDelayDuration={100}>
       <aside
         className={cn(
           "select-none overflow-x-hidden",
           collapsed
-            ? "absolute right-0 top-6 z-10 h-8 w-8 overflow-hidden"
+            ? "pointer-events-auto absolute inset-0 overflow-hidden"
             : "sticky top-6 h-fit max-h-[calc(100vh-8rem)] shrink-0 overflow-y-auto py-2"
         )}
         style={!collapsed ? { width: EDITOR_OUTLINE_WIDTH } : undefined}
         aria-label={t("editor.outline")}
+        data-editor-outline={collapsed ? "collapsed" : "expanded"}
       >
         <div className={cn("flex", collapsed ? "justify-center" : "mb-3 justify-between px-1")}>
           <Tooltip>
@@ -311,4 +319,12 @@ export const EditorOutline = ({ editor, scrollContainer, collapsed, shortcutLabe
       </aside>
     </TooltipProvider>
   );
+
+  // Absolute inside the note scroller is tied to the document top, so the
+  // button scrolls away. The anchor sits on the pane and does not scroll.
+  if (collapsed) {
+    return collapsedAnchor ? createPortal(outline, collapsedAnchor) : null;
+  }
+
+  return outline;
 };

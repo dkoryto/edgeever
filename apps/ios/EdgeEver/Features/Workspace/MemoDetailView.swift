@@ -20,6 +20,10 @@ struct MemoDetailView: View {
     @State private var imageExportDocumentPayload: MemoImageExportDocumentPayload?
     @State private var imageExportMessage: MemoImageExportMessage?
     @State private var imageExporting = false
+    @State private var imageFontStatus = "ready"
+    @State private var imageFontRecoveryId: String?
+    @State private var imageFontsRecovered = false
+    @State private var retryImageFonts: (() -> Void)?
     @State private var imageExportRequestId: String?
     @State private var imageExportBuffer = MemoImageExportBuffer()
     @State private var imageShareOptionsOpen = false
@@ -141,13 +145,22 @@ struct MemoDetailView: View {
                 imageExportDocumentPayload = nil
             }
         }
-        .sheet(item: $imageExportPreviewPayload) { payload in
+        .sheet(item: $imageExportPreviewPayload, onDismiss: {
+            imageFontRecoveryId = nil
+            retryImageFonts = nil
+            if let requestId = imageExportRequestId { imageExportBuffer.cancel(requestId: requestId) }
+            imageExportRequestId = nil
+            imageExporting = false
+        }) { payload in
+            let currentPayload = imageExportPreviewPayload ?? payload
             MemoImageExportPreviewView(
-                payload: payload,
+                payload: currentPayload,
+                isLoadingFonts: imageExporting,
+                onRetryFonts: { retryImageFonts?() },
                 isEnglish: env.preferences.isEnglish,
                 isPolish: env.preferences.uiLanguage == .polish,
                 onCopy: {
-                    guard let image = UIImage(contentsOfFile: payload.url.path) else {
+                    guard let image = UIImage(contentsOfFile: currentPayload.url.path) else {
                         imageExportMessage = MemoImageExportMessage(
                             title: env.preferences.t("复制失败", en: "Copy failed", pl: "Nie udało się skopiować"),
                             message: env.preferences.t("无法读取生成的图片。", en: "The generated image could not be read.", pl: "Nie udało się odczytać wygenerowanego obrazu.")
@@ -161,15 +174,17 @@ struct MemoDetailView: View {
                     )
                 },
                 onSave: {
+                    imageFontRecoveryId = nil
                     imageExportPreviewPayload = nil
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        imageExportDocumentPayload = MemoImageExportDocumentPayload(url: payload.url)
+                        imageExportDocumentPayload = MemoImageExportDocumentPayload(url: currentPayload.url)
                     }
                 },
                 onShare: {
+                    imageFontRecoveryId = nil
                     imageExportPreviewPayload = nil
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        imageExportSharePayload = MemoImageExportSharePayload(url: payload.url)
+                        imageExportSharePayload = MemoImageExportSharePayload(url: currentPayload.url)
                     }
                 }
             )
@@ -278,6 +293,14 @@ struct MemoDetailView: View {
                         .disabled(imageExporting || !bodyReady || memo == nil)
                     }
                 }
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if imageExporting && imageExportPreviewPayload == nil {
+                ProgressView(imageFontStatus == "loading"
+                    ? env.preferences.t("字体加载中…", en: "Loading font…", ja: "フォントを読み込み中…", pl: "Ładowanie czcionki…")
+                    : env.preferences.t("正在生成图片…", en: "Generating image…", ja: "画像を生成中…", pl: "Generowanie obrazu…"))
+                    .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)).padding()
             }
         }
         .alert(item: $imageExportMessage) { message in
@@ -416,6 +439,8 @@ struct MemoDetailView: View {
                 imageExportBuffer.cancel(requestId: requestId)
             }
             imageExportRequestId = nil
+            imageFontRecoveryId = nil
+            retryImageFonts = nil
             imageExporting = false
         }
         .onChange(of: bodyReady) { _, _ in
@@ -1224,6 +1249,14 @@ struct MemoDetailView: View {
         let requestId = UUID().uuidString
         imageExportBuffer.start(requestId: requestId)
         imageExportRequestId = requestId
+        imageFontRecoveryId = requestId
+        imageFontsRecovered = false
+        imageFontStatus = "loading"
+        retryImageFonts = {
+            exportMemoImage(memo, format: format, theme: theme, fontStyle: fontStyle, fontSize: fontSize,
+                cardWidth: cardWidth, showTitle: showTitle, showNotebook: showNotebook, showTags: showTags,
+                showUpdatedAt: showUpdatedAt, showBranding: showBranding, intent: .preview)
+        }
         imageExportIntent = intent
         imageExporting = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
@@ -1275,6 +1308,17 @@ struct MemoDetailView: View {
     }
 
     private func handleImageExportEvent(_ event: [String: Any]) {
+        if event["type"] as? String == "imageExportFontsReady" {
+            guard event["requestId"] as? String == imageFontRecoveryId else { return }
+            imageFontsRecovered = true
+            if !imageExporting, imageExportPreviewPayload?.fontFallback == true { retryImageFonts?() }
+            return
+        }
+        if event["type"] as? String == "imageExportFontStatus" {
+            guard event["requestId"] as? String == imageExportRequestId else { return }
+            imageFontStatus = event["status"] as? String ?? "ready"
+            return
+        }
         switch imageExportBuffer.accept(event) {
         case .none:
             break
@@ -1309,18 +1353,27 @@ struct MemoDetailView: View {
             imageExporting = false
             do {
                 let directory = FileManager.default.temporaryDirectory.appendingPathComponent("EdgeEverNoteExports", isDirectory: true)
+                    .appendingPathComponent(UUID().uuidString, isDirectory: true)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                 let safeFilename = (filename as NSString).lastPathComponent
                 let url = directory.appendingPathComponent(safeFilename)
                 try data.write(to: url, options: .atomic)
-                if imageExportIntent == .preview {
+                if imageExportIntent == .preview || metadata.fontFallback {
                     imageExportPreviewPayload = MemoImageExportPreviewPayload(
+                        id: imageExportPreviewPayload?.id ?? UUID(),
+                        fontFallback: metadata.fontFallback,
                         url: url,
                         width: metadata.width,
                         height: metadata.height,
                         totalImages: metadata.totalImages,
                         failedImages: metadata.failedImages
                     )
+                    if metadata.fontFallback, imageFontsRecovered {
+                        let recoveryId = imageFontRecoveryId
+                        DispatchQueue.main.async {
+                            if imageFontRecoveryId == recoveryId, imageExportPreviewPayload != nil { retryImageFonts?() }
+                        }
+                    }
                 } else {
                     imageExportSharePayload = MemoImageExportSharePayload(url: url)
                 }
@@ -1346,7 +1399,8 @@ private struct MemoImageExportSharePayload: Identifiable {
 }
 
 private struct MemoImageExportPreviewPayload: Identifiable {
-    let id = UUID()
+    let id: UUID
+    let fontFallback: Bool
     let url: URL
     let width: Int
     let height: Int
@@ -1373,6 +1427,8 @@ private struct MemoImageExportMessage: Identifiable {
 private struct MemoImageExportPreviewView: View {
     @Environment(\.dismiss) private var dismiss
     let payload: MemoImageExportPreviewPayload
+    let isLoadingFonts: Bool
+    let onRetryFonts: () -> Void
     let isEnglish: Bool
     var isPolish: Bool = false
     let onCopy: () -> Void
@@ -1395,6 +1451,16 @@ private struct MemoImageExportPreviewView: View {
                                 isPolish ? "Podgląd niedostępny" : (isEnglish ? "Preview unavailable" : "无法预览"),
                                 systemImage: "photo.badge.exclamationmark"
                             )
+                        }
+                        if payload.fontFallback || isLoadingFonts {
+                            if isLoadingFonts {
+                                ProgressView(isPolish ? "Ładowanie czcionki…" : (isEnglish ? "Loading font…" : "字体加载中…"))
+                            } else {
+                                warning(isPolish
+                                    ? "Tymczasowo używane są czcionki zastępcze. Po załadowaniu oryginalne czcionki zostaną przywrócone automatycznie."
+                                    : (isEnglish ? "Temporarily using substitute fonts. The original fonts will be restored automatically when loaded." : "暂时使用替代字体，加载成功后将自动恢复"))
+                                Button(isPolish ? "Ponów próbę" : (isEnglish ? "Retry" : "重试"), action: onRetryFonts)
+                            }
                         }
                         if payload.failedImages > 0 {
                             warning(
@@ -1489,6 +1555,7 @@ private struct MemoImageDocumentExportView: UIViewControllerRepresentable {
 
 private final class MemoImageExportBuffer {
     struct Metadata {
+        let fontFallback: Bool
         let width: Int
         let height: Int
         let totalImages: Int
@@ -1538,6 +1605,7 @@ private final class MemoImageExportBuffer {
               let data = Data(base64Encoded: chunks.joined())
         else { return .failure("Image export returned invalid data") }
         let metadata = Metadata(
+            fontFallback: event["fontFallback"] as? Bool ?? false,
             width: (event["width"] as? NSNumber)?.intValue ?? 0,
             height: (event["height"] as? NSNumber)?.intValue ?? 0,
             totalImages: (event["totalImages"] as? NSNumber)?.intValue ?? 0,

@@ -159,6 +159,7 @@ export const WorkspaceScreen = ({
   const [imageShareFromList, setImageShareFromList] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [finishCreateForIncomingShare, setFinishCreateForIncomingShare] = useState(false);
   const [createSeed, setCreateSeed] = useState<MobileCreateMemoSeed | null>(null);
   const [createChoiceOpen, setCreateChoiceOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -234,8 +235,16 @@ export const WorkspaceScreen = ({
   const notebooks = notebooksQuery.data?.notebooks ?? [];
   useEffect(() => {
     const english = isEnglishMobileLocale(localePreference);
-    const preferredNotebookId = english ? "nb_demo_features_en" : "nb_demo_features";
-    const alternateNotebookId = english ? "nb_demo_features" : "nb_demo_features_en";
+    const notebookIdForSlug = (slug: string, fallbackId: string) =>
+      notebooks.find((notebook) => notebook.slug === slug)?.id ?? fallbackId;
+    const preferredNotebookId = notebookIdForSlug(
+      english ? "feature-demos" : "demo-features",
+      english ? "nb_demo_features_en" : "nb_demo_features",
+    );
+    const alternateNotebookId = notebookIdForSlug(
+      english ? "demo-features" : "feature-demos",
+      english ? "nb_demo_features" : "nb_demo_features_en",
+    );
 
     if (!notebooks.some((notebook) => notebook.id === preferredNotebookId)) {
       return;
@@ -602,6 +611,17 @@ export const WorkspaceScreen = ({
       return;
     }
 
+    // A second external share must not replace props on the mounted create
+    // editor: its document and upload target belong to the previous note.
+    // Keep the new payload pending until that editor has saved and unmounted.
+    const pendingShareKey = sharedImages.length > 0
+      ? `images:${sharedImages.map((image) => image.uri).join("|")}`
+      : incomingShareUrl;
+    if (createOpen && pendingShareKey && processedShareUrlRef.current !== pendingShareKey && notebooks.length > 0) {
+      setFinishCreateForIncomingShare(true);
+      return;
+    }
+
     if (sharedImages.length > 0) {
       const shareKey = `images:${sharedImages.map((image) => image.uri).join("|")}`;
       if (processedShareUrlRef.current === shareKey) {
@@ -690,6 +710,7 @@ export const WorkspaceScreen = ({
         }
       });
   }, [
+    createOpen,
     incomingShareError,
     incomingShareIsResolving,
     incomingSharePayloads.length,
@@ -1203,11 +1224,13 @@ export const WorkspaceScreen = ({
         client={client}
         dataScope={dataScope}
         defaultNotebookId={createMemoNotebookId}
+        finishForIncomingShare={finishCreateForIncomingShare}
         imageCompressionEnabled={imageCompressionEnabled}
         initialDraft={incomingClipDraft ?? createSeed}
         initialSharedImages={incomingShareImages}
         notebooks={notebooks}
         onCreated={() => {
+          setFinishCreateForIncomingShare(false);
           setCreateOpen(false);
           setIncomingClipDraft(null);
           setIncomingShareImages([]);
@@ -1217,6 +1240,7 @@ export const WorkspaceScreen = ({
           setSelectedMemoId(null);
         }}
         onDismiss={() => {
+          setFinishCreateForIncomingShare(false);
           setCreateOpen(false);
           setIncomingClipDraft(null);
           setIncomingShareImages([]);

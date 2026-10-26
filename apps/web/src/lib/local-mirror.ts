@@ -264,7 +264,11 @@ export const listLocalMemos = async (scope: string, params: LocalMemoListParams)
   memos.sort((left, right) => {
     if (params.trash) return (right.deletedAt ?? "").localeCompare(left.deletedAt ?? "") || right.id.localeCompare(left.id);
     if (params.sort === "created-desc") return right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id);
-    if (params.sort === "title-asc") return (left.title || left.excerpt).localeCompare(right.title || right.excerpt, "zh-CN") || right.updatedAt.localeCompare(left.updatedAt);
+    if (params.sort === "title-asc" || params.sort === "title-desc") {
+      const titleCompare = (left.title || left.excerpt).localeCompare(right.title || right.excerpt, "zh-CN");
+      if (titleCompare !== 0) return params.sort === "title-desc" ? -titleCompare : titleCompare;
+      return right.updatedAt.localeCompare(left.updatedAt);
+    }
     return Number(right.isPinned) - Number(left.isPinned) || right.updatedAt.localeCompare(left.updatedAt) || right.id.localeCompare(left.id);
   });
 
@@ -549,7 +553,7 @@ export const getLocalNotebook = async (scope: string, notebookId: string) => {
   return result;
 };
 
-export const updateLocalNotebook = async (scope: string, notebookId: string, input: Partial<Pick<Notebook, "name" | "parentId" | "sortOrder">>) => {
+export const updateLocalNotebook = async (scope: string, notebookId: string, input: Partial<Pick<Notebook, "name" | "parentId" | "sortOrder" | "icon" | "color" | "textColor" | "colorTarget" | "isBold" | "iconInverted" | "rowInverted">>) => {
   const notebook = await getLocalNotebook(scope, notebookId);
   if (!notebook) return null;
   const updated = { ...notebook, ...input, updatedAt: new Date().toISOString() };

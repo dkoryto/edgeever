@@ -1,3 +1,4 @@
+import { automaticPosterThumbnails } from "./poster-thumbnails.ts";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolveDeploymentBuildMetadata } from "@edgeever/shared/deployment-metadata";
@@ -144,6 +145,7 @@ export default defineConfig({
     __EDGEEVER_DESKTOP_BUILD__: JSON.stringify(isDesktopBuild),
   },
   plugins: [
+    automaticPosterThumbnails(),
     tailwindcss(),
     localDevelopmentAuth(),
     developmentServiceWorkerReset,
@@ -195,6 +197,7 @@ export default defineConfig({
           {
             urlPattern: ({ request, url }) =>
               request.mode === "navigate" &&
+              !/^\/(?:share\/notebook|s)\//.test(url.pathname) &&
               !["/mobile-edit.html", "/note-print.html", "/tiptap-ime-test.html"].includes(url.pathname),
             handler: "NetworkFirst",
             options: {
@@ -220,7 +223,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ url }) => /\/assets\/i18n-(?:ja|pl)-/.test(url.pathname),
+            urlPattern: ({ url }) => /\/assets\/i18n-(?:ja|pl|ru)-/.test(url.pathname),
             handler: "CacheFirst",
             options: {
               cacheName: "edgeever-optional-locales",
@@ -289,7 +292,7 @@ export default defineConfig({
       ? false
       : {
           resolveDependencies: (_filename, dependencies) => dependencies.filter((dependency) =>
-            !/(?:vendor-code-highlight|vendor-(?:mermaid|D3|tiptap|prosemirror|floating|codemirror|x6|infographic|zod|streamdown)|vendor~(?:wasm|emacs-lisp)-|vendor-radix(?!-slot)|ui-primitives|ui-button-tooltip|i18n-(?:ja|pl)-)/.test(dependency),
+            !/(?:vendor-code-highlight|vendor-(?:mermaid|D3|tiptap|prosemirror|floating|codemirror|x6|infographic|zod|streamdown)|vendor~(?:wasm|emacs-lisp)-|vendor-radix(?!-slot)|ui-primitives|ui-button-tooltip|i18n-(?:ja|pl|ru)-)/.test(dependency),
           ),
         },
     rolldownOptions: {
@@ -310,6 +313,10 @@ export default defineConfig({
         // Preserve initialization order when manual vendor groups form cycles.
         strictExecutionOrder: true,
         codeSplitting: {
+          // Groups own only matching modules. Recursive ownership lets optional
+          // editors capture shared utilities (clsx, tslib, React hooks), making
+          // a basic button or locale load the whole editor at startup.
+          includeDependenciesRecursively: false,
           groups: [
             {
               // Font coverage tables are static data used by image sharing.
@@ -338,6 +345,11 @@ export default defineConfig({
             {
               name: "i18n-pl",
               test: /[\\/]i18n[\\/](?:resources[\\/])?pl\.ts$/,
+              priority: 41,
+            },
+            {
+              name: "i18n-ru",
+              test: /[\\/]i18n[\\/](?:resources[\\/])?ru\.ts$/,
               priority: 41,
             },
             {
@@ -422,7 +434,7 @@ export default defineConfig({
             },
             {
               name: "vendor-query",
-              test: /node_modules[\\/]@tanstack[\\/]react-query[\\/]/,
+              test: /node_modules[\\/]@tanstack[\\/](?:react-query|query-core)[\\/]/,
               priority: 25,
             },
             {
@@ -444,6 +456,7 @@ export default defineConfig({
               name: "vendor-icons",
               test: /node_modules[\\/]lucide-react[\\/]/,
               priority: 18,
+              entriesAware: true,
             },
             {
               name: "vendor-radix-slot",

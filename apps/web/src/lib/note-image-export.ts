@@ -74,6 +74,8 @@ export type DownloadNoteImageOptions = NoteHtmlExportMeta & {
 };
 
 export type PreparedNoteImage = {
+  fontFallback: boolean;
+  fontsReady?: Promise<unknown>;
   blob: Blob;
   filename: string;
   height: number;
@@ -227,7 +229,7 @@ export const createNoteImage = async ({
   prepareNoteImageContent(exportContent);
   onFontLoadStatus?.("loading");
   const assets = await prepareNoteImageAssets({ theme: resolvedTheme, fontStyle, text: [title, notebook, ...(tags || []), updatedAt, author, readingTimeText, prepared.bodyHtml].join(" "), urls: noteImageAssetUrls })
-    .then(result => { onFontLoadStatus?.("ready"); return result; })
+    .then(result => { onFontLoadStatus?.(result.fontFallback ? "error" : "ready"); return result; })
     .catch(error => { onFontLoadStatus?.("error"); throw error; });
   checkAborted(signal);
   const host = document.createElement("div");
@@ -284,6 +286,8 @@ export const createNoteImage = async ({
     const filename = `${basename}.${extension}`;
 
     return {
+      fontFallback: assets.fontFallback,
+      fontsReady: assets.fontsReady,
       blob: image.blob,
       filename,
       height: image.height,

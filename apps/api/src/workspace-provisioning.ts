@@ -5,6 +5,7 @@ import {
 import {
   DEFAULT_NOTEBOOK_SEEDS,
   WELCOME_MEMO_ID,
+  WELCOME_MEMO_REPAIRED_CONTENT_HASH,
   WELCOME_MEMO_SEED_CONTENT_HASH,
   WELCOME_MEMO_SEED_TITLE,
   buildWelcomeMemoContent,
@@ -16,6 +17,7 @@ import {
   localizeMemoTemplateSeed,
 } from "@edgeever/shared/memo-template-seeds";
 import { createId, isoNow } from "./entity-utils";
+import { markWorkspaceExampleSeedPendingStatement } from "./workspace-example-seed";
 import { sha256 } from "./hash-utils";
 import type {
   DatabaseAdapter,
@@ -44,7 +46,7 @@ export type DefaultNotebookRow = {
   id: string;
   name: string;
   slug: string;
-  color: string;
+  color: string | null;
   sortOrder: number;
 };
 
@@ -148,7 +150,7 @@ export const createWorkspaceSeedLocalizationStatements = async (
   // The memo row must still carry the seeded title and the system actor, and
   // the content must still be the seeded revision. The content is replaced
   // before the memo row, so the memo row's guard looks for that replacement.
-  const welcomeGuard = (contentHash: string, revision: number) => ({
+  const welcomeGuard = (states: [string, number][]) => ({
     sql: `${SEED_LOCALIZATION_PENDING}
       AND EXISTS (
         SELECT 1 FROM memos
@@ -157,7 +159,7 @@ export const createWorkspaceSeedLocalizationStatements = async (
       )
       AND EXISTS (
         SELECT 1 FROM memo_contents
-        WHERE memo_id = ? AND content_hash = ? AND revision = ?
+        WHERE memo_id = ? AND (${states.map(() => "(content_hash = ? AND revision = ?)").join(" OR ")})
       )`,
     bindings: [
       workspaceId,
@@ -165,12 +167,14 @@ export const createWorkspaceSeedLocalizationStatements = async (
       workspaceId,
       WELCOME_MEMO_SEED_TITLE,
       WELCOME_MEMO_ID,
-      contentHash,
-      revision,
+      ...states.flat(),
     ],
   });
-  const welcomeIsUntouched = welcomeGuard(WELCOME_MEMO_SEED_CONTENT_HASH, 0);
-  const welcomeContentWasLocalized = welcomeGuard(welcomeContentHash, 1);
+  const welcomeIsUntouched = welcomeGuard([
+    [WELCOME_MEMO_SEED_CONTENT_HASH, 0],
+    [WELCOME_MEMO_REPAIRED_CONTENT_HASH, 1],
+  ]);
+  const welcomeContentWasLocalized = welcomeGuard([[welcomeContentHash, 1], [welcomeContentHash, 2]]);
 
   return [
     ...createWorkspaceDefaultSeedStatements(db, workspaceId, now, locale, {
@@ -324,6 +328,7 @@ export const ensureUserWorkspace = async (
       now,
     )),
     ...createWorkspaceDefaultSeedStatements(db, workspaceId, now, locale),
+    markWorkspaceExampleSeedPendingStatement(db, workspaceId, now),
   ]);
   return { workspaceId, role: "member" };
 };

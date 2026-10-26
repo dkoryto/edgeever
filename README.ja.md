@@ -8,6 +8,7 @@
   <p>
     <a href="https://github.com/tianma-if/edgeever/stargazers"><img src="https://img.shields.io/github/stars/tianma-if/edgeever?style=social" alt="GitHub Stars" /></a>
     <a href="https://github.com/tianma-if/edgeever/network/members"><img src="https://img.shields.io/github/forks/tianma-if/edgeever?style=social" alt="GitHub Forks" /></a>
+    <a href="https://github.com/tianma-if/edgeever"><img src="https://img.shields.io/badge/Git_Clones-40K%2B%20%2F%2014d-brightgreen?style=social&logo=git" alt="Git クローン数" /></a>
     <a href="https://github.com/tianma-if/edgeever/pkgs/container/edgeever"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Ftianma-if%2Fedgeever%2Fedgeever&query=downloadCount&style=social&logo=docker&label=Docker%20Pulls" alt="Docker Pulls" /></a>
     <a href="https://www.producthunt.com/products/edgeever?utm_source=other&utm_medium=social"><img src="https://img.shields.io/badge/Product%20Hunt-ea532a?style=social&logo=product-hunt" alt="Product Hunt" /></a>
     <a href="https://hellogithub.com/repository/tianma-if/edgeever" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=150fee4403f6433880bda91e9576ac06&claim_uid=TWNAjisURpnhL1l&theme=small" alt="Featured｜HelloGitHub" /></a>
@@ -40,6 +41,7 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 
 * **Evernote**：最もストレスがなく、滑らかなマルチデバイス即時クラウド同期を備えています。しかし多機能な商業向けスイートへと進化するにつれ、広告や追加機能が増えてシステム負荷が高まりました。さらに無料枠の制限が厳格化され、高度な AI サブスクリプションも高額で、現代のセルフホストやプライベートな AI ワークフローとの柔軟な連携も難しくなっています。
 * **Obsidian**：ファイルは開いていますが、コアはクローズドです。公式同期は有料、第三者同期は手間がかかります。フラットなローカルファイル走査に依存するため、ノートが数千・数万件に増えたりプラグインを重ねると起動や検索がもたつきます。画像と添付をノートと一緒に置くと保管庫が膨らみ、モバイル同期が遅く、削除後に添付が残りやすいです。気軽な取り込みには重いことがあります。
+* **Joplin**：定番のオープンソース三ペイン型ノートですが、UI の見た目や編集の操作感は十数年前のソフトウェアのまま止まっているような印象があり、現代的な洗練さや滑らかさに欠けます。公式の高速同期（Joplin Cloud）は有料サブスクリプションが必要で、WebDAV やクラウドストレージを使った無料同期はファイル単位のポーリングに依存するため、ノートや添付が増えると（特にモバイルで）同期が遅くなります。また Joplin Server のセルフホストには自前サーバーの保守が必要で、費用ゼロの Serverless 構成がありません。さらにブラウザですぐ使える完全な Web ワークスペースがなく、ネイティブな AI Agent 連携（MCP/ACP）やマルチモーダルな知識表現も備えていません。
 * **Memos などのタイムライン型**：簡潔ですが、三ペインの整理作業とはレイアウトが違います。
 * **思源ノート（SiYuan）などのブロック型知識ベース**：高機能でオープンソースのセルフホストに対応していますが、徹底した「ブロック（Block）」構造により日常的な気軽なメモや流れるような文章作成には心理的負荷がやや高くなります。また、サーバー費用ゼロの Serverless 運用形態がなく、マルチデバイス同期は公式の有料サブスクリプション、または S3/WebDAV 同期機能を有料でアンロックして自前ストレージを用意する必要があります。
 
@@ -79,7 +81,7 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 <a id="features"></a>
 ## 機能とワークフローマトリクス
 
-「インスピレーションの収集 · 深い創作 · 知識の蓄積」をシームレスにつなぐオールインワンワークスペース：
+「インスピレーションの収集 · 深い創作 · 知識の蓄積」をシームレスにつなぐオールインワンワークスペース（👉 **[全 17 の実機スクリーンショットと活用ガイドを見る](docs/best-practices.md)**）：
 
 | モジュール | 基本機能 | 高度な機能 |
 | :--- | :--- | :--- |
@@ -89,8 +91,6 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 | **データと可視化** | • ネイティブ表編集と Markdown テーブル描画<br>• Mermaid 記法によるフローチャート・シーケンス図・構成図の直接描画 | • **AI 多次元テーブル**：プロンプトからタグや日付などの列型を備えた業務テーブルを自動生成<br>• **一般公開集計フォーム**：ログイン不要の Web フォームを発行し、回答をリアルタイムでテーブルへ集約<br>• **AI インフォグラフィック生成**：タイムライン、比較図、マトリクス、マインドマップを自動生成 |
 | **AI とエコシステム** | • サイドバーの伴走型 AI アシスタント（要約、校正、翻訳、推敲）<br>• BYOK（独自 API キー）：OpenAI、Anthropic、Gemini 互換プロトコル対応 | • **ネイティブ Agent プロトコル連携**：外部 Agent が読み書きできる MCP、ローカル Agent を直接呼び出す ACP を標準搭載<br>• **AI RSS 購読日報**：フィードを自動収集し、AI がノイズを排除して構造化日報を作成<br>• 自由な拡張を可能にするプラグイン開発 API |
 | **マルチ端末同期と基盤** | • PC・スマホ・タブレット間で低遅延・シームレスに同期、接続端末数無制限<br>• Web、macOS、Windows、Linux、iOS、Android の全プラットフォーム公式対応<br>• オフラインファーストと自動同期キュー：オフラインでも軽快に執筆、再接続時に自動増分同期<br>• 標準 SQLite、可逆 ZIP アーカイブ・Markdown の入出力に対応 | • **生涯サーバー代ゼロ**：Cloudflare の無料枠で 100% 稼働（短文約 15 万件＋画像約 5 万枚）<br>• **自由な Docker セルフホスト**：自宅サーバー・VPS・NAS にワンクリック配置、数百万件規模の高速同期に対応<br>• サーバー側ブルートフォース保護とセキュリティ隔離 |
-
-👉 全 14 の実機スクリーンショットと解説を見る：**[完全な活用シーンとショーケースガイド](docs/best-practices.md)**
 
 ## 導入
 
@@ -195,7 +195,7 @@ curl -fsSL https://edgeever.org/install.sh | bash
 ### ストレージ拡張とサードパーティ画像ホスティング
 
 - **OSS オブジェクトストレージ**：インスタンスのオーナーは **設定 → 詳細 → OSS オブジェクトストレージ** で S3 互換ストレージを設定できます。切り替えは既存添付を移さず、影響しません。
-- **デスクトップ版 PicGo 連携**：デスクトップ版ではローカルの PicGo クライアントと連携可能で、ノート内の画像を GitHub、SM.MS、又拍雲、七牛雲や自前ホストへ直接アップロードでき、セルフホスト環境のストレージと帯域消費を節約できます。
+- **デスクトップ版 PicGo 連携**：デスクトップ版は、このパソコンまたは信頼できる別のマシン（NAS など）の PicGo / PicList に挿入画像を渡し、GitHub、SM.MS、又拍雲、七牛雲や自前ホストへアップロードできます。
 
 ### プラグインとカスタムテーマ
 
@@ -315,3 +315,26 @@ EdgeEver の名称、ロゴ、その他のブランド表示は公式プロジ�
 EdgeEver は、個人とコミュニティが開発・維持する独立したオープンソースのノートアプリです。Evernote Corporation およびその関係会社と提携、認可、後援、推奨の関係はありません。
 
 EdgeEver はセルフホスト型ソフトウェアです。公式デモを除き、メンテナはユーザー内容をホスト、管理、審査しません。インスタンスに保存または表示される内容は、その利用者または運用者の責任であり、メンテナの見解ではありません。
+
+## コントリビューター
+
+<!-- readme-contributors:start -->
+<p align="left">
+  <a href="https://github.com/tianma-if"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/5895871?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@tianma-if" /></a>
+  <a href="https://github.com/sivdead"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/27731043?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@sivdead" /></a>
+  <a href="https://github.com/thorufur"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/55167?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@thorufur" /></a>
+  <a href="https://github.com/yulei666"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/7358439?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@yulei666" /></a>
+  <a href="https://github.com/arsaboo"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/18319734?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@arsaboo" /></a>
+  <a href="https://github.com/alyyasser"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/16476111?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@alyyasser" /></a>
+  <a href="https://github.com/MadlyFX"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/4896705?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@MadlyFX" /></a>
+  <a href="https://github.com/claude"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81847?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@claude" /></a>
+  <a href="https://github.com/Crowszzz"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/75199133?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Crowszzz" /></a>
+  <a href="https://github.com/Z-DDV"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/122068983?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Z-DDV" /></a>
+  <a href="https://github.com/0xfelixli"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81979996?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@0xfelixli" /></a>
+  <a href="https://github.com/Sergmay911"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/304439776?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Sergmay911" /></a>
+  <a href="https://github.com/X77seven"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/171017641?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@X77seven" /></a>
+  <a href="https://github.com/mookim-eth"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/97934198?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@mookim-eth" /></a>
+  <a href="https://github.com/nzhdotme"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/9588882?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@nzhdotme" /></a>
+  <a href="https://github.com/Shunamxiao"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/92215296?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Shunamxiao" /></a>
+</p>
+<!-- readme-contributors:end -->

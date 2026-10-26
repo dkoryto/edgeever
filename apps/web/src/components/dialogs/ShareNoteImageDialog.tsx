@@ -63,13 +63,14 @@ const WIDTH_OPTIONS: Array<{ id: NoteImageCardWidth; labelKey: string }> = [
 
 /** Use the export renderer itself so thumbnails show each theme's actual layout. */
 const NoteImageThemePreview = ({
-  theme, fontStyle, title, body, quote,
+  theme, fontStyle, title, body, quote, retryKey,
 }: {
   theme: NoteImageTheme;
   fontStyle: NoteImageFontStyle;
   title: string;
   body: string;
   quote: string;
+  retryKey: number;
 }) => {
   const containerRef = useRef<HTMLSpanElement>(null);
   const [scale, setScale] = useState(0.24);
@@ -78,10 +79,17 @@ const NoteImageThemePreview = ({
     let active = true;
     setAssetCss("");
     void prepareNoteImageAssets({ theme, fontStyle, text: `${title} ${body} ${quote}`, urls: noteImageAssetUrls })
-      .then(assets => { if (active) setAssetCss(assets.css); })
+      .then(assets => {
+        if (active) setAssetCss(assets.css);
+        void assets.fontsReady?.then(async () => {
+          if (!active) return;
+          const restored = await prepareNoteImageAssets({ theme, fontStyle, text: `${title} ${body} ${quote}`, urls: noteImageAssetUrls });
+          if (active) setAssetCss(restored.css);
+        }, () => {}).catch(() => {});
+      })
       .catch(() => { /* The full preview reports asset loading errors and offers retry. */ });
     return () => { active = false; };
-  }, [theme, fontStyle, title, body, quote]);
+  }, [theme, fontStyle, title, body, quote, retryKey]);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -201,6 +209,10 @@ export const ShareNoteImageDialog = ({
             return URL.createObjectURL(result.blob);
           });
           setPrepared(result);
+          // Recovery is scoped to this render, so an older template cannot replace a newer one.
+          void result.fontsReady?.then(() => {
+            if (generation === generationRef.current) setRetry(value => value + 1);
+          }, () => { /* Keep the fallback preview and its retry action. */ });
         })
         .catch((reason: unknown) => {
           if (generation === generationRef.current) setError(reason instanceof Error && reason.message === "NOTE_IMAGE_FONT_UNAVAILABLE" ? "font" : true);
@@ -230,8 +242,14 @@ export const ShareNoteImageDialog = ({
     theme,
   ]);
 
+  useEffect(() => {
+    if (!open || contentFontStatus !== "error") return;
+    const retryFonts = () => setRetry(value => value + 1);
+    window.addEventListener("online", retryFonts);
+    return () => window.removeEventListener("online", retryFonts);
+  }, [open, contentFontStatus]);
+
   useEffect(() => () => {
-    generationRef.current += 1;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
@@ -291,6 +309,7 @@ export const ShareNoteImageDialog = ({
         <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto md:overflow-hidden md:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="relative flex min-h-72 flex-1 flex-col overflow-auto bg-[#e9e9e7] md:max-h-[72vh]">
             <div className="flex min-h-full w-full flex-col items-center justify-start p-4 sm:p-6">
+              <FontLoadFeedback template status={contentFontStatus} onRetry={() => setRetry(value => value + 1)} />
               {previewUrl && prepared ? (
                 <div className="my-auto flex w-full items-center justify-center">
                   <img
@@ -343,6 +362,7 @@ export const ShareNoteImageDialog = ({
                       onClick={() => setPreference("theme", id)}
                     >
                       <NoteImageThemePreview
+                        retryKey={retry}
                         theme={id}
                         fontStyle="auto"
                         title={source.title || label}
@@ -379,7 +399,7 @@ export const ShareNoteImageDialog = ({
                   ))}
                 </SelectContent>
               </Select>
-              {error === true ? null : <FontLoadFeedback status={selectedFontStatus} onRetry={() => setRetry(value => value + 1)} />}
+              {error === true ? null : <FontLoadFeedback template={contentFontStatus === "error"} status={selectedFontStatus} onRetry={() => setRetry(value => value + 1)} />}
 
               {/* Font Size */}
               <div className="space-y-1.5 pt-1">

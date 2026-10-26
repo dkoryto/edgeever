@@ -58,6 +58,7 @@ describe("Docker release contract", () => {
       dockerfile.indexOf("FROM oven/bun:1.3.14-alpine AS runtime"),
     );
     const packageMetadata = JSON.parse(readProjectFile("package.json"));
+    expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS manifests");
     expect(dockerfile).toContain("FROM oven/bun:1.3.14-alpine AS runtime");
     expect(dockerfile).toContain("COPY patches patches");
     expect(dockerfile).toContain("COPY docs docs");
@@ -79,6 +80,10 @@ describe("Docker release contract", () => {
       "bun build scripts/self-hosted-server.mjs --target=bun --format=esm --outdir=dist/self-hosted --sourcemap=none",
     );
     expect(dockerfile).toContain("RUN bun run build:web && bun run build:self-hosted");
+    expect(dockerfile).toContain("scripts/prepare-poster-thumbnails.mjs scripts/prepare-poster-thumbnails.d.mts scripts/");
+    expect(dockerfile).toContain("RUN apk add --no-cache chromium nodejs");
+    expect(dockerfile).toContain("EDGE_EVER_POSTER_CHROME_EXECUTABLE=/usr/bin/chromium");
+    expect(dockerfile).toContain("COPY tests/browser/poster-thumbnail-generator.html tests/browser/poster-thumbnail-generator.ts tests/browser/");
     expect(runtimeStage).toContain(
       "COPY --from=build /app/dist/self-hosted/self-hosted-server.js ./scripts/self-hosted-server.js",
     );

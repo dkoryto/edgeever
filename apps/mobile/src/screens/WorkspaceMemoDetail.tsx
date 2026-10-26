@@ -519,7 +519,7 @@ export const MemoDetailModal = ({
     showNotebook: imageShareNotebook, showTags: imageShareTags, showUpdatedAt: imageShareUpdatedAt,
     showBranding: imageShareBranding,
   } = imageSharePreferences;
-  const imageShareFontLabel = getMobileNoteImageFontLabel(imageShareFontStyle, imageShareTheme, resolvedLocale === "zh-CN");
+  const imageShareFontLabel = getMobileNoteImageFontLabel(imageShareFontStyle, imageShareTheme, getMobileCatalog(resolvedLocale).editor.imageShare);
   const [viewerNotebookPickerOpen, setViewerNotebookPickerOpen] = useState(false);
   const [viewerTagsOpen, setViewerTagsOpen] = useState(false);
   const [viewerTags, setViewerTags] = useState<string[]>([]);
@@ -1627,11 +1627,11 @@ export const MemoDetailModal = ({
               />
               {preparedNoteImage.fontFallback || isExportingImage ? (
                 <View accessibilityLiveRegion="polite">
-                  <Text style={imageShareStyles.previewWarning}>{resolvedLocale === "zh-CN"
-                    ? isExportingImage ? "字体加载中…" : "暂时使用替代字体，加载成功后将自动恢复"
-                    : isExportingImage ? "Loading font…" : "Temporarily using substitute fonts. The original fonts will be restored automatically when loaded."}</Text>
+                  <Text style={imageShareStyles.previewWarning}>{isExportingImage
+                    ? getMobileCatalog(resolvedLocale).fontLoad.templateLoading
+                    : getMobileCatalog(resolvedLocale).fontLoad.templateFallback}</Text>
                   {!isExportingImage ? <Pressable accessibilityRole="button" onPress={() => imageFontRecoveryRef.current?.retry()} style={imageShareStyles.previewSecondaryButton}>
-                    <Text>{resolvedLocale === "zh-CN" ? "重试" : "Retry"}</Text>
+                    <Text>{getMobileCatalog(resolvedLocale).fontLoad.retry}</Text>
                   </Pressable> : null}
                 </View>
               ) : null}
@@ -1687,6 +1687,13 @@ export const MemoDetailModal = ({
                     selected={imageShareFontStyle}
                     theme={imageShareTheme}
                     chinese={resolvedLocale === "zh-CN"}
+                    copy={{
+                      fontStyles: getMobileCatalog(resolvedLocale).editor.imageShare.fontStyles,
+                      templateFonts: getMobileCatalog(resolvedLocale).editor.imageShare.templateFonts,
+                      title: getMobileCatalog(resolvedLocale).editor.imageShare.fontStyle,
+                      loadingPreview: getMobileCatalog(resolvedLocale).mobile.imageShare.loadingPreview,
+                      previewUnavailable: getMobileCatalog(resolvedLocale).mobile.imageShare.previewUnavailable,
+                    }}
                     onSelect={async (font) => {
                       setImageSharePreference("fontStyle", font);
                       setImageShareFontPickerOpen(false);

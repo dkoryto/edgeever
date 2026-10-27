@@ -442,7 +442,9 @@ describe("Cloudflare deployment entrypoints", () => {
 
   test("deployed repositories receive guarded daily upstream updates", () => {
     const workflow = readRepositoryFile(".github/workflows/sync-edgeever-upstream.yml");
-    const bunConfig = readRepositoryFile("bunfig.toml");
+    const bunConfig = Bun.TOML.parse(readRepositoryFile("bunfig.toml")) as {
+      test: { pathIgnorePatterns: string[] };
+    };
     const packageJson = JSON.parse(readRepositoryFile("package.json"));
     const scripts = packageJson.scripts as Record<string, string>;
 
@@ -456,7 +458,7 @@ describe("Cloudflare deployment entrypoints", () => {
     expect(workflow).toContain("FORCE_REDEPLOY: ${{ github.event_name == 'workflow_dispatch' }}");
     expect(workflow).not.toContain("force_redeploy:");
     expect(workflow).toContain("bun run db:migrate:local");
-    expect(bunConfig).toContain('pathIgnorePatterns = ["tests/e2e/**"]');
+    expect(bunConfig.test.pathIgnorePatterns).toContain("tests/e2e/**");
     expect(scripts.test).toBe("bun run test:bulk && bun run test:integration");
     expect(scripts["test:bulk"]).toContain("--path-ignore-patterns='tests/e2e/**'");
     expect(scripts["test:bulk"]).toContain("apps/api/src/companion-learning.test.mjs");

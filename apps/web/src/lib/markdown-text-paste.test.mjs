@@ -19,7 +19,14 @@ const clipboard = (entries) => ({
   getData: (type) => entries[type] ?? "",
 });
 
-const paste = (editor, entries) => pasteBlockMarkdown(editor.view, clipboard(entries));
+// The unmounted Tiptap view throws on fields it does not have, such as
+// `input`, so tests pass the state, dispatch and Shift state ProseMirror keeps.
+const viewOf = (editor, shiftKey = false) => ({
+  get state() { return editor.state; },
+  dispatch: (transaction) => editor.view.dispatch(transaction),
+  input: { shiftKey },
+});
+const paste = (editor, entries, shiftKey) => pasteBlockMarkdown(viewOf(editor, shiftKey), clipboard(entries));
 
 // Excerpt of the sample attached to issue #660.
 const ISSUE_SAMPLE = `# 一级标题
@@ -56,13 +63,16 @@ describe("block Markdown detection", () => {
       "```\ncode\n```",
       "| a | b |\n| --- | --- |",
       "above\n---\nbelow",
+      "Name | Value\n--- | ---\na | b",
+      "Name | Value\n:--- | ---:",
     ]) {
       expect(isBlockMarkdownText(text)).toBe(true);
     }
   });
 
   test("leaves ordinary text and single inline lines to the existing paste path", () => {
-    for (const text of ["", "plain sentence", "first line\nsecond line", "**bold** only", "#hashtag\nnext", "- single item"]) {
+    for (const text of ["", "plain sentence", "first line\nsecond line", "**bold** only", "#hashtag\nnext", "- single item",
+      "use a | b to pipe\nthen read the output", "A | B\nnot a delimiter"]) {
       expect(isBlockMarkdownText(text)).toBe(false);
     }
   });
@@ -133,6 +143,35 @@ describe("pasting plain-text Markdown in rich text", () => {
       "vscode-editor-data": JSON.stringify({ mode: "markdown" }),
     })).toBe(true);
     expect(editor.getJSON().content.map((node) => node.type)).toEqual(["heading", "bulletList"]);
+    editor.destroy();
+  });
+
+  test("keeps escaped Markdown literal instead of running paste rules again", () => {
+    const editor = createEditor();
+    expect(paste(editor, { "text/plain": "# Title\n\n\\*not italic\\*\n\n\\`not code\\`" })).toBe(true);
+    const json = editor.getJSON().content;
+    expect(json.map((node) => node.type)).toEqual(["heading", "paragraph", "paragraph"]);
+    expect(json[1]).toEqual({ type: "paragraph", content: [{ type: "text", text: "*not italic*" }] });
+    expect(json[2]).toEqual({ type: "paragraph", content: [{ type: "text", text: "`not code`" }] });
+    editor.destroy();
+  });
+
+  test("leaves paste as plain text to the default path", () => {
+    const editor = createEditor();
+    expect(paste(editor, { "text/plain": "# title\n- item" }, true)).toBe(false);
+    expect(paste(editor, {
+      "text/plain": "# title\n- item",
+      "text/html": "<div>…</div>",
+      "vscode-editor-data": JSON.stringify({ mode: "markdown" }),
+    }, true)).toBe(false);
+    expect(paste(editor, { "text/plain": "# title\n- item" })).toBe(true);
+    editor.destroy();
+  });
+
+  test("renders a table written without outer pipes", () => {
+    const editor = createEditor();
+    expect(paste(editor, { "text/plain": "Name | Value\n--- | ---\na | b" })).toBe(true);
+    expect(editor.getJSON().content.map((node) => node.type)).toContain("table");
     editor.destroy();
   });
 });

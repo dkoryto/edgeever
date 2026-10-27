@@ -27,6 +27,17 @@ const dispatchPaste = async (editor: Locator, entries: Record<string, string>) =
   }, entries);
 };
 
+const openMemo = async (page: Page, memo: { id: string }, title: string) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "全部笔记", exact: true }).click();
+  await page.getByPlaceholder("搜索笔记").fill(title);
+  await page.locator(`[data-memo-id="${memo.id}"]`).locator("button").first().click();
+  const editor = page.locator(".ProseMirror[contenteditable='true']");
+  await expect(editor).toBeEditable();
+  await editor.click();
+  return editor;
+};
+
 // Issue #660: Markdown copied from a plain-text source.
 const MARKDOWN = [
   "# 一级标题",
@@ -55,14 +66,7 @@ test("renders Markdown pasted as plain text in the rich-text editor", async ({ p
   const memo = await createMemo(page, title);
 
   try {
-    await page.goto("/");
-    await page.getByRole("button", { name: "全部笔记", exact: true }).click();
-    await page.getByPlaceholder("搜索笔记").fill(title);
-    await page.locator(`[data-memo-id="${memo.id}"]`).locator("button").first().click();
-
-    const editor = page.locator(".ProseMirror[contenteditable='true']");
-    await expect(editor).toBeEditable();
-    await editor.click();
+    const editor = await openMemo(page, memo, title);
     await dispatchPaste(editor, { "text/plain": MARKDOWN });
 
     await expect(editor.locator("h1")).toHaveText("一级标题");
@@ -104,6 +108,57 @@ test("renders Markdown pasted as plain text in the rich-text editor", async ({ p
       const body = await response.json() as { memo: { contentMarkdown: string } };
       return body.memo.contentMarkdown;
     }, { timeout: 20_000 }).toContain("# 一级标题");
+  } finally {
+    await deleteMemo(page, memo.id);
+  }
+});
+
+test("keeps escaped delimiters, paste as plain text and tables without outer pipes", async ({ page }) => {
+  const title = `Markdown text paste details ${Date.now()}`;
+  const memo = await createMemo(page, title);
+
+  try {
+    const editor = await openMemo(page, memo, title);
+
+    // Escaped delimiters stay literal; paste rules do not parse the result again.
+    await dispatchPaste(editor, { "text/plain": "# Escaped\n\n\\*not italic\\*\n\n\\`not code\\`" });
+    await expect(editor.locator("h1")).toHaveText("Escaped");
+    await expect(editor).toContainText("*not italic*");
+    await expect(editor).toContainText("`not code`");
+    await expect(editor.locator("em")).toHaveCount(0);
+    await expect(editor.locator("p code")).toHaveCount(0);
+
+    // A table written without outer pipes.
+    await page.keyboard.press("ControlOrMeta+End");
+    await dispatchPaste(editor, { "text/plain": "Name | Value\n--- | ---\na | b" });
+    await expect(editor.locator("table td")).toHaveCount(2);
+    await expect(editor).not.toContainText("--- | ---");
+
+    // Cmd/Ctrl+Shift+V keeps the literal text, also for a VS Code Markdown copy.
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.down("Shift");
+    await dispatchPaste(editor, { "text/plain": "# literal heading\n- literal item" });
+    await dispatchPaste(editor, {
+      "text/plain": "# vscode heading\n- vscode item",
+      "text/html": "<div style=\"font-family: Menlo\"><span># vscode heading</span></div>",
+      "vscode-editor-data": JSON.stringify({ mode: "markdown" }),
+    });
+    await page.keyboard.up("Shift");
+    await expect(editor).toContainText("# literal heading");
+    await expect(editor).toContainText("- literal item");
+    await expect(editor).toContainText("# vscode heading");
+    await expect(editor.locator("h1")).toHaveCount(1);
+    await expect(editor.locator("ul > li")).toHaveCount(0);
+
+    // The same VS Code copy without Shift is converted.
+    await dispatchPaste(editor, {
+      "text/plain": "# vscode converted\n- vscode item",
+      "text/html": "<div style=\"font-family: Menlo\"><span># vscode converted</span></div>",
+      "vscode-editor-data": JSON.stringify({ mode: "markdown" }),
+    });
+    await expect(editor.locator("h1")).toHaveCount(2);
+    await expect(editor.locator("h1").nth(1)).toHaveText("vscode converted");
+    await expect(editor.locator("ul > li")).toHaveCount(1);
   } finally {
     await deleteMemo(page, memo.id);
   }

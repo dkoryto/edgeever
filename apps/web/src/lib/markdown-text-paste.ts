@@ -11,13 +11,21 @@ const BLOCK_MARKDOWN_LINES = [
   /^\s*\|.*\|\s*$/,
   /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/,
 ];
+// GFM table delimiter row, with or without outer pipes: `--- | :---:`.
+const TABLE_DELIMITER_LINE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)+\|?\s*$/;
+
+/** A delimiter row directly under a header row that contains a pipe. */
+const hasTableWithoutOuterPipes = (lines: string[]) =>
+  lines.some((line, index) => index > 0 && TABLE_DELIMITER_LINE.test(line) && lines[index - 1]!.includes("|"));
 
 /**
  * Plain text whose lines carry Markdown block structure. A single line keeps
  * the existing inline paste rules unless it is a heading.
  */
 export const isBlockMarkdownText = (text: string) => {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((line) => line.trim());
+  const allLines = text.replace(/\r\n?/g, "\n").split("\n");
+  if (hasTableWithoutOuterPipes(allLines)) return true;
+  const lines = allLines.filter((line) => line.trim());
   if (lines.length === 0) return false;
   if (lines.length === 1) return HEADING_LINE.test(lines[0]!);
   return lines.some((line) => BLOCK_MARKDOWN_LINES.some((pattern) => pattern.test(line)));
@@ -50,6 +58,8 @@ export const pasteBlockMarkdown = (
   view: { state: EditorState; dispatch: (transaction: Transaction) => void },
   data: DataTransfer | null,
 ) => {
+  // ProseMirror tracks Shift for Cmd/Ctrl+Shift+V, which pastes the literal text.
+  if ((view as { input?: { shiftKey?: boolean } }).input?.shiftKey) return false;
   if (!data || !isPlainMarkdownSource(data)) return false;
   const { $from } = view.state.selection;
   if ($from.parent.type.spec.code) return false;
@@ -66,10 +76,11 @@ export const pasteBlockMarkdown = (
   // lists and other blocks keep their type.
   const isParagraph = (node: ProseMirrorNode | null) => node?.type.name === "paragraph";
   const slice = new Slice(doc.content, isParagraph(doc.firstChild) ? 1 : 0, isParagraph(doc.lastChild) ? 1 : 0);
+  // No `uiEvent: "paste"`: Tiptap paste rules would parse the already parsed
+  // text again and turn escaped `\*` or `` \` `` back into marks.
   view.dispatch(view.state.tr
     .replaceSelection(slice)
     .scrollIntoView()
-    .setMeta("paste", true)
-    .setMeta("uiEvent", "paste"));
+    .setMeta("paste", true));
   return true;
 };

@@ -3372,6 +3372,8 @@ export const ru = {
     templateNamePrompt: "Введите название шаблона",
     templateSaved: "Шаблон сохранён",
     templateCreated: "Шаблон создан",
+    createFailedTitle: "Шаблон не сохранён",
+    createFailed: "Не удалось сохранить шаблон. Проверьте подключение и повторите попытку.",
     unavailable: "Выберите доступный блокнот перед созданием заметки.",
     items: memoTemplateSeedTranslations("ru"),
   },

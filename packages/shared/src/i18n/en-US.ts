@@ -3372,6 +3372,8 @@ export const enUS = {
     templateNamePrompt: "Enter a template name",
     templateSaved: "Template saved",
     templateCreated: "Template created",
+    createFailedTitle: "Template not saved",
+    createFailed: "Could not save the template. Check your connection and try again.",
     unavailable: "Select an available notebook before creating a note.",
     items: memoTemplateSeedTranslations("en-US"),
   },

@@ -3370,6 +3370,8 @@ export const zhCN = {
     templateNamePrompt: "请输入模板名称",
     templateSaved: "模板已保存",
     templateCreated: "模板已创建",
+    createFailedTitle: "模板未保存",
+    createFailed: "无法保存模板，请检查网络连接后重试。",
     unavailable: "当前无法创建笔记，请先选择可用笔记本。",
     items: memoTemplateSeedTranslations("zh-CN"),
   },

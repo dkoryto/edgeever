@@ -169,6 +169,8 @@ export const TemplatesPane = ({
         contentMarkdown: entry.contentMarkdown,
         tags: entry.tags,
       });
+    } catch {
+      // The workspace shows the save failure notice; the entry stays available to retry.
     } finally {
       setAddingGalleryKey(null);
     }

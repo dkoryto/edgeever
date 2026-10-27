@@ -3361,6 +3361,8 @@ export const pl = {
     templateNamePrompt: "Wpisz nazwę szablonu",
     templateSaved: "Zapisano szablon",
     templateCreated: "Utworzono szablon",
+    createFailedTitle: "Nie zapisano szablonu",
+    createFailed: "Nie udało się zapisać szablonu. Sprawdź połączenie i spróbuj ponownie.",
     unavailable: "Przed utworzeniem notatki wybierz dostępny notatnik.",
     items: memoTemplateSeedTranslations("pl"),
   },

@@ -3361,6 +3361,8 @@ export const ja = {
     templateNamePrompt: "テンプレート名を入力",
     templateSaved: "テンプレートを保存しました",
     templateCreated: "テンプレートを作成しました",
+    createFailedTitle: "テンプレートを保存できませんでした",
+    createFailed: "テンプレートを保存できませんでした。接続を確認してもう一度お試しください。",
     unavailable: "ノートを作成する前に、利用できるノートブックを選んでください。",
     items: memoTemplateSeedTranslations("ja"),
   },

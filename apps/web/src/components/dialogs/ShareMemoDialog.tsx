@@ -166,12 +166,12 @@ export const ShareMemoDialog = ({
               <ShareQrCode key={`qr-${share.token}`} url={shareUrl} hint={t("sharing.qrCodeHint")} />
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               <Button variant="danger" disabled={isWorking} onClick={() => revokeMutation.mutate(memoId, { onSuccess: () => onOpenChange(false) })}>
                 <Trash2 className="h-4 w-4" />
                 {t("sharing.revoke")}
               </Button>
-              <Button variant="outline" onClick={() => window.open(shareUrl, "_blank", "noopener,noreferrer")}>
+              <Button variant="outline" className="ml-auto" onClick={() => window.open(shareUrl, "_blank", "noopener,noreferrer")}>
                 <ExternalLink className="h-4 w-4" />
                 {t("sharing.open")}
               </Button>

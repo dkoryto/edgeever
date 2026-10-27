@@ -20,10 +20,13 @@ export const ShareSlugControls = ({
   const { t } = useTranslation();
   const inputId = useId();
   const [draft, setDraft] = useState(slug ?? "");
+  const [submitted, setSubmitted] = useState<string | null>(null);
   useEffect(() => setDraft(slug ?? ""), [slug]);
 
   const normalized = draft.trim().toLowerCase();
   const invalid = normalized !== "" && !isValidMemoShareSlug(normalized);
+  // A taken address only describes the value that was sent; editing the field clears it.
+  const showTaken = taken && normalized === submitted;
   const canSave = !busy && normalized !== "" && !invalid && normalized !== slug;
 
   return (
@@ -31,7 +34,9 @@ export const ShareSlugControls = ({
       className="space-y-1.5 pt-1"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSave) onChange(normalized);
+        if (!canSave) return;
+        setSubmitted(normalized);
+        onChange(normalized);
       }}
     >
       <label htmlFor={inputId} className="block text-xs font-medium leading-5 text-slate-800">
@@ -46,7 +51,7 @@ export const ShareSlugControls = ({
           autoCapitalize="off"
           autoComplete="off"
           spellCheck={false}
-          aria-invalid={invalid || taken}
+          aria-invalid={invalid || showTaken}
           onChange={(event) => setDraft(event.target.value)}
           className="min-w-0 font-mono text-xs"
         />
@@ -84,7 +89,7 @@ export const ShareSlugControls = ({
           </Tooltip>
         ) : null}
       </div>
-      {invalid || taken ? (
+      {invalid || showTaken ? (
         <p className="text-xs leading-5 text-rose-600" role="alert">
           {t(invalid ? "sharing.customSlugInvalid" : "sharing.customSlugTaken")}
         </p>

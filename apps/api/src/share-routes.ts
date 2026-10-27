@@ -1,4 +1,4 @@
-import { setSvgResourceSecurityHeaders, accountNoteProseFromRow, collectMemoLinkIds, isPdfAttachment, isValidMemoShareSlug, MemoShareUpdateSchema, NoteBodyFontUpdateSchema, NoteProseUpdateSchema, parsePublishedNoteBodyFont, publicNoteProseFromAccount, PublicShareUnlockSchema, resolveMemoContentDoc, resolvePlayableMediaMimeType, sanitizeNoteProseCss, type AccountNoteProse, type ManagedMemoShare, type MemoShare, type NoteProseAccountRow, type PublicMemoShare, type TiptapDoc } from "@edgeever/shared";
+import { setSvgResourceSecurityHeaders, accountNoteProseFromRow, collectMemoLinkIds, isPdfAttachment, MemoShareUpdateSchema, NoteBodyFontUpdateSchema, NoteProseUpdateSchema, parsePublishedNoteBodyFont, publicNoteProseFromAccount, PublicShareUnlockSchema, resolveMemoContentDoc, resolvePlayableMediaMimeType, sanitizeNoteProseCss, type AccountNoteProse, type ManagedMemoShare, type MemoShare, type NoteProseAccountRow, type PublicMemoShare, type TiptapDoc } from "@edgeever/shared";
 import { zValidator } from "@hono/zod-validator";
 import type { Hono } from "hono";
 import type { AppContext, AppEnv } from "./api-context";
@@ -16,10 +16,10 @@ import {
 } from "./share-access";
 import { allowPasswordProtectedShare, setShareAccessCookie, shareAccessCookiePath } from "./share-http-access";
 import { encryptSharePassword, readSharePassword } from "./share-password-encryption";
+import { resolveMemoShareToken } from "./share-page";
 import { generateSharePassword } from "./share-password";
 
 const SHARE_TOKEN_BYTES = 32;
-const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 type MemoShareRow = {
   password_encrypted?: string | null;
@@ -79,16 +79,7 @@ const contentDisposition = (kind: SharedResourceRow["kind"], mimeType: string | 
   return inline ? contentDispositionInline(filename) : contentDispositionAttachment(filename);
 };
 
-/** Resolves a public path segment, either the random token or a custom slug, to the share token. */
-const resolveShareToken = async (c: AppContext, value: string) => {
-  const segment = value.trim();
-  if (SHARE_TOKEN_PATTERN.test(segment)) return segment;
-  if (!isValidMemoShareSlug(segment)) return null;
-  const row = await c.env.storage.db.prepare(
-    `SELECT token FROM memo_shares WHERE slug = ? LIMIT 1`
-  ).bind(segment).first<{ token: string }>();
-  return row?.token ?? null;
-};
+const resolveShareToken = (c: AppContext, value: string) => resolveMemoShareToken(c.env.storage.db, value);
 
 const shareSlugTaken = (c: AppContext) =>
   apiError(c, "share_slug_taken", "This share address is already in use", 409);

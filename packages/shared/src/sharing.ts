@@ -16,14 +16,7 @@ export type MemoShare = {
   password?: string;
 };
 
-/** 3-40 lowercase letters, digits and inner hyphens; never as long as a 43-character token. */
-export const MEMO_SHARE_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
-export const MEMO_SHARE_SLUG_MAX_LENGTH = 40;
-/** Segments that already mean something under /share/. */
-export const RESERVED_MEMO_SHARE_SLUGS: readonly string[] = ["notebook"];
-
-export const isValidMemoShareSlug = (value: string) =>
-  MEMO_SHARE_SLUG_PATTERN.test(value) && !value.includes("--") && !RESERVED_MEMO_SHARE_SLUGS.includes(value);
+export { isValidMemoShareSlug, MEMO_SHARE_SLUG_MAX_LENGTH, MEMO_SHARE_SLUG_PATTERN, RESERVED_MEMO_SHARE_SLUGS } from "./share-slug";
 
 /** Path segment for the public link: the custom address when set, otherwise the token. */
 export const memoSharePathSegment = (share: Pick<MemoShare, "slug" | "token">) => share.slug ?? share.token;

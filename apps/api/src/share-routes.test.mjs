@@ -663,7 +663,7 @@ describe("custom memo share addresses", () => {
     expect(updated.status).toBe(200);
     expect((await updated.json()).share).toMatchObject({ token: sourceToken, slug: "my-notes-2026", passwordProtected: false });
 
-    for (const segment of ["my-notes-2026", sourceToken]) {
+    for (const segment of ["my-notes-2026", "My-Notes-2026", sourceToken]) {
       const response = await app.request(`/api/public/shares/${segment}`, {}, environment);
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({ share: { title: "Source" } });

@@ -6,10 +6,12 @@ import { Link, useLocation } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { memoSharePathSegment } from "@edgeever/shared";
 import { SharePasswordControls } from "./SharePasswordControls";
+import { ShareSlugControls } from "./ShareSlugControls";
 import { ShareQrCode } from "./ShareQrCode";
 import { SHARE_DIALOG_PRIMARY_BUTTON_CLASS_NAME, SHARE_DIALOG_WIDTH_CLASS_NAME } from "./share-dialog-layout";
-import { api, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
+import { api, ApiRequestError, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { MemoNotebookSites } from "../MemoNotebookSites";
 
@@ -59,6 +61,13 @@ export const ShareMemoDialog = ({
       void queryClient.invalidateQueries({ queryKey: ["memo-shares"] });
     },
   });
+  const slugMutation = useMutation({
+    mutationFn: (slug: string | null) => api.updateMemoShare(memoId, { slug }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKey, data);
+      void queryClient.invalidateQueries({ queryKey: ["memo-shares"] });
+    },
+  });
   const revokeMutation = useMutation({
     mutationFn: (targetMemoId: string) => api.revokeMemoShare(targetMemoId),
     onSuccess: (_, targetMemoId) => {
@@ -69,6 +78,7 @@ export const ShareMemoDialog = ({
   useEffect(() => {
     createMutation.reset();
     passwordMutation.reset();
+    slugMutation.reset();
     revokeMutation.reset();
     setCopyState("idle");
     setCopyTarget("link");
@@ -80,9 +90,10 @@ export const ShareMemoDialog = ({
   const share = shareQuery.data?.share ?? null;
   const revealedPassword = share?.passwordProtected ? share.password ?? "" : "";
 
-  const shareUrl = share ? getPublicShareUrl(share.token) : "";
-  const isWorking = shareQuery.isLoading || createMutation.isPending || passwordMutation.isPending || revokeMutation.isPending;
-  const error = shareQuery.error || createMutation.error || passwordMutation.error || revokeMutation.error;
+  const shareUrl = share ? getPublicShareUrl(memoSharePathSegment(share)) : "";
+  const isWorking = shareQuery.isLoading || createMutation.isPending || passwordMutation.isPending || slugMutation.isPending || revokeMutation.isPending;
+  const slugTaken = slugMutation.error instanceof ApiRequestError && slugMutation.error.code === "share_slug_taken";
+  const error = shareQuery.error || createMutation.error || passwordMutation.error || (slugTaken ? null : slugMutation.error) || revokeMutation.error;
 
   const markCopied = (target: "link" | "password" | "both", copied: boolean) => {
     setCopyTarget(target);
@@ -152,6 +163,13 @@ export const ShareMemoDialog = ({
                 )}
               </Button>
             </div>
+
+            <ShareSlugControls
+              slug={share.slug ?? null}
+              busy={isWorking}
+              taken={slugTaken}
+              onChange={(slug) => slugMutation.mutate(slug)}
+            />
 
             <SharePasswordControls
               passwordProtected={share.passwordProtected}

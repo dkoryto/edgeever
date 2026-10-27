@@ -18,6 +18,7 @@ const clipboardBytes = (value) => {
 const clipboardFilename = (value) => {
   if (typeof value !== "string") throw new TypeError("Clipboard filename must be a string");
   const base = value.split(/[\\/]/).pop() ?? "";
+  // oxlint-disable-next-line no-control-regex -- strips control characters from clipboard filenames
   const cleaned = base.replace(/[\u0000-\u001f\u007f]/g, "").replace(/^\.+$/, "").trim().slice(0, 180);
   return cleaned || "attachment";
 };

@@ -22,4 +22,14 @@ describe("template gallery save failures", () => {
     expect(handler).toContain("} catch {");
     expect(handler).toContain("setAddingGalleryKey(null);");
   });
+
+  test("ignores a second gallery add while the first is still saving", () => {
+    const start = templatesPaneSource.indexOf("const addGalleryTemplate = async");
+    const end = templatesPaneSource.indexOf("const draftHtmlPreview", start);
+    const handler = templatesPaneSource.slice(start, end);
+    expect(handler.indexOf("if (addingGalleryRef.current) return;"))
+      .toBeLessThan(handler.indexOf("await onCreateSavedTemplate"));
+    expect(handler).toContain("addingGalleryRef.current = true;");
+    expect(handler).toContain("addingGalleryRef.current = false;");
+  });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import {
   Check,
   ChevronLeft,
@@ -96,6 +96,8 @@ export const TemplatesPane = ({
     onUse: () => void;
   } | null>(null);
   const [addingGalleryKey, setAddingGalleryKey] = useState<string | null>(null);
+  // State lags a render behind, so a double click would pass the state check twice.
+  const addingGalleryRef = useRef(false);
 
   const [deleteConfirmTemplate, setDeleteConfirmTemplate] = useState<SavedMemoTemplate | null>(null);
   const [templateIdCopyNotice, setTemplateIdCopyNotice] = useState<{
@@ -159,7 +161,8 @@ export const TemplatesPane = ({
   );
 
   const addGalleryTemplate = async (entry: MemoTemplateGalleryEntry) => {
-    if (addingGalleryKey) return;
+    if (addingGalleryRef.current) return;
+    addingGalleryRef.current = true;
     setAddingGalleryKey(entry.key);
     try {
       await onCreateSavedTemplate({
@@ -172,6 +175,7 @@ export const TemplatesPane = ({
     } catch {
       // The workspace shows the save failure notice; the entry stays available to retry.
     } finally {
+      addingGalleryRef.current = false;
       setAddingGalleryKey(null);
     }
   };

@@ -37,7 +37,7 @@ import { isAllowedAppNavigation, isAllowedPrintPreviewUrl, isResourceDownloadUrl
 import { showWindow } from "./window-visibility.mjs";
 import { formatGlobalShortcutForHumans, globalShortcutAccelerator, globalShortcutAcceleratorsConflict, normalizeGlobalShortcutBinding, parseStoredGlobalShortcuts, replaceGlobalShortcut, toggleMainWindow } from "./global-shortcut.mjs";
 import { trayIconPath } from "./tray-icon.mjs";
-import { writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
+import { writeFileClipboard, writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
 import { registerClipboardReadIpc } from "./clipboard-read.mjs";
 import { captureRegionScreenToNote, captureScreenToNote, createScreenshotCaptureGuard, screenshotImportIpcPayload, writeScreenshotTempPath } from "./screenshot-capture.mjs";
 import { cancelScreenshotRegionSelection, openScreenshotRegionSelector } from "./screenshot-region.mjs";
@@ -1949,6 +1949,10 @@ const startApplication = async () => {
   ipcMain.handle("desktop:copy-text", (_event, value) => writeTextClipboard(clipboard, value));
   ipcMain.handle("desktop:copy-html", (_event, input) => writeRichClipboard(clipboard, ClipboardItem, input));
   ipcMain.handle("desktop:copy-image", (_event, bytes) => writeImageClipboard(clipboard, ClipboardItem, bytes));
+  ipcMain.handle("desktop:copy-file", (_event, bytes, filename) => writeFileClipboard(clipboard, ClipboardItem, {
+    bytes,
+    filename,
+  }, { directory: join(app.getPath("temp"), "edgeever-clipboard") }));
   registerClipboardReadIpc(ipcMain, {
     clipboard,
     getMainWindow: () => mainWindow,

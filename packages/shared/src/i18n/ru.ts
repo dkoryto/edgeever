@@ -2876,6 +2876,8 @@ export const ru = {
     qrCodeLabel: "QR-код ссылки доступа",
     qrCodeHint: "Наведите камеру телефона, чтобы открыть эту заметку.",
     qrCodeNotebookHint: "Наведите камеру телефона, чтобы открыть этот блокнот.",
+    qrCodeDownloadPng: "Скачать PNG",
+    qrCodeDownloadSvg: "Скачать SVG",
     contentLabel: "Содержимое общей заметки",
     siteHideContents: "Скрыть оглавление",
     siteShowContents: "Показать оглавление",

@@ -2876,6 +2876,8 @@ export const enUS = {
     qrCodeLabel: "QR code for the share link",
     qrCodeHint: "Scan with a phone camera to open this note.",
     qrCodeNotebookHint: "Scan with a phone camera to open this notebook.",
+    qrCodeDownloadPng: "Download PNG",
+    qrCodeDownloadSvg: "Download SVG",
     contentLabel: "Shared note content",
     siteHideContents: "Hide contents",
     siteShowContents: "Show contents",

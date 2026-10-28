@@ -2865,6 +2865,8 @@ export const ja = {
     qrCodeLabel: "共有リンクの QR コード",
     qrCodeHint: "スマートフォンのカメラで読み取ると、このノートを開けます。",
     qrCodeNotebookHint: "スマートフォンのカメラで読み取ると、このノートブックを開けます。",
+    qrCodeDownloadPng: "PNG をダウンロード",
+    qrCodeDownloadSvg: "SVG をダウンロード",
     contentLabel: "共有されたノートの内容",
     siteHideContents: "目次を隠す",
     siteShowContents: "目次を表示",

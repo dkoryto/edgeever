@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QRCodeSVG } from "qrcode.react";
+import { shareQrCodeFileName } from "./ShareQrCode.tsx";
 
 const source = (name) => readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
 
@@ -36,5 +37,29 @@ describe("share link QR code", () => {
     expect(markup).toContain('aria-label="QR code for the share link"');
     expect(markup).not.toContain("<title");
     expect(markup).toContain("<path");
+  });
+
+  test("offers PNG and SVG downloads of a print-size code with a quiet zone", () => {
+    const component = source("ShareQrCode.tsx");
+    expect(component).toContain('t("sharing.qrCodeDownloadPng")');
+    expect(component).toContain('t("sharing.qrCodeDownloadSvg")');
+    expect(component).toContain("marginSize={QR_DOWNLOAD_MARGIN}");
+
+    const markup = renderToStaticMarkup(createElement(QRCodeSVG, {
+      value: "https://notes.example/share/abc",
+      size: 1024,
+      level: "M",
+      marginSize: 4,
+      xmlns: "http://www.w3.org/2000/svg",
+    }));
+    expect(markup).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(markup).toContain('width="1024"');
+  });
+
+  test("names the downloaded file after the share address", () => {
+    expect(shareQrCodeFileName("https://notes.example/share/meeting-notes", "png")).toBe("edgeever-share-qr-meeting-notes.png");
+    expect(shareQrCodeFileName("https://notes.example/share/notebook/abc_DEF-1", "svg")).toBe("edgeever-share-qr-abc_DEF-1.svg");
+    expect(shareQrCodeFileName("https://notes.example/s/%3Cx%3E", "png")).toBe("edgeever-share-qr-3Cx3E.png");
+    expect(shareQrCodeFileName("not a url", "png")).toBe("edgeever-share-qr.png");
   });
 });

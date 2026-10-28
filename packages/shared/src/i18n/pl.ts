@@ -2865,6 +2865,8 @@ export const pl = {
     qrCodeLabel: "Kod QR linku udostępniania",
     qrCodeHint: "Zeskanuj aparatem telefonu, aby otworzyć tę notatkę.",
     qrCodeNotebookHint: "Zeskanuj aparatem telefonu, aby otworzyć ten notes.",
+    qrCodeDownloadPng: "Pobierz PNG",
+    qrCodeDownloadSvg: "Pobierz SVG",
     contentLabel: "Treść udostępnionej notatki",
     siteHideContents: "Ukryj spis treści",
     siteShowContents: "Pokaż spis treści",

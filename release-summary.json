@@ -1,38 +1,35 @@
 {
-  "version": "2.12.0",
+  "version": "2.13.0",
   "changes": {
     "en-US": [
-      "Add an optional template gallery across Web, Android and iOS, with improved Japanese and Russian labels. Thanks @dkoryto (#609).",
-      "Remember outline folding for each note and add expand/collapse controls.",
-      "Fix freezes when switching rich-text notes and correctly render pasted Markdown, including Shift+Insert. Thanks @dkoryto (#693); fixes #702.",
-      "Make image formatting and attachment actions consistent, and show image controls after explicit selection.",
-      "Fix clipped diagram nodes while dragging, preserve Mermaid subgraph edge alignment in previews and exports, and improve thin-shape resizing in posters (#700).",
-      "Keep background Node processes out of the macOS Dock.",
-      "Update HTML sanitization to improve content security. Thanks @imgdown (#699).",
-      "Use EdgeEver branding in official website link previews.",
-      "Clarify desktop backup retention labels and improve backup settings readability."
+      "Insert chemical formulas and equations, and continue typing naturally after inserting or editing formulas. (#717, #719; @dkoryto, #718, #720)",
+      "Download share QR codes as PNG or SVG, with consistent PNG image dimensions. (#714; @dkoryto, #716)",
+      "Improve attachment restore and shared-resource security to prevent malicious restored content from executing scripts. (#701; @sivdead, #711)",
+      "Fix notes and nested notebooks remaining queued when their parent notebook has not synced yet. (#712)",
+      "Fix Mermaid diagrams with HTML labels in the enlarged viewer and preserve compact subgraph layouts. (#704)",
+      "Preserve the drop position while images upload, remove empty galleries after deleting all images, and refine image controls. (#707, #709)",
+      "Keep single tildes in text such as 1~2~3 instead of rendering accidental strikethrough. (#698)",
+      "Keep the Simplified Chinese default title out of untitled shared pages and link previews. (#713; @dkoryto, #715)"
     ],
     "zh-CN": [
-      "Web、Android 和 iOS 新增可选模板库，并完善日文和俄文界面。感谢 @dkoryto（#609）。",
-      "大纲折叠状态按笔记记忆，并增加全部展开和折叠操作。",
-      "修复富文本笔记切换卡顿，并正确转换粘贴的 Markdown（含 Shift+Insert）。感谢 @dkoryto（#693）；修复 #702。",
-      "统一图片格式和附件操作，图片控件仅在明确选中后显示。",
-      "修复图表节点拖动时被裁切、Mermaid 子图连线在预览和导出中错位，以及海报细线形状缩放显示问题（#700）。",
-      "避免后台 Node 进程在 macOS Dock 中出现多余图标。",
-      "升级 HTML 内容净化依赖，提升内容安全性。感谢 @imgdown（#699）。",
-      "官网链接分享预览更新为 EdgeEver 品牌图。",
-      "明确桌面端备份保留数量文案，改善备份设置的排版与可读性。"
+      "支持插入化学式与化学方程式，插入或编辑公式后可顺畅继续输入。（#717、#719；@dkoryto，#718、#720）",
+      "支持将分享二维码下载为 PNG 或 SVG，PNG 图片尺寸保持一致。（#714；@dkoryto，#716）",
+      "加强附件恢复与共享资源安全校验，防止恶意恢复内容执行脚本。（#701；@sivdead，#711）",
+      "修复父笔记本尚未同步时，笔记及子笔记本持续卡在同步队列的问题。（#712）",
+      "修复含 HTML 标签的 Mermaid 图表无法放大查看的问题，并改善紧凑子图布局。（#704）",
+      "图片上传期间保留拖放插入位置，删除全部图片后移除空图库，并统一图片控件的视觉样式。（#707、#709）",
+      "保留 1~2~3 等文本中的单波浪线，避免误显示为删除线。（#698）",
+      "修复无标题分享页面及链接预览中出现简体中文默认标题的问题。（#713；@dkoryto，#715）"
     ],
     "ja": [
-      "Web・Android・iOS に任意で使えるテンプレートギャラリーを追加し、日本語とロシア語の表示を改善しました。",
-      "ノートごとにアウトラインの折りたたみ状態を記憶し、一括展開・折りたたみ操作を追加しました。",
-      "リッチテキストのノート切り替え時のフリーズを修正し、Shift+Insert を含む Markdown の貼り付けを改善しました。",
-      "画像の書式と添付ファイル操作を統一し、画像を選択したときに操作ボタンを表示するよう改善しました。",
-      "図形ドラッグ時の見切れ、Mermaid サブグラフのプレビュー・書き出し時の接続線のずれ、ポスターの細い図形のサイズ変更表示を修正しました。",
-      "バックグラウンドの Node プロセスが macOS Dock に表示される問題を修正しました。",
-      "HTML サニタイズを更新し、コンテンツの安全性を改善しました。",
-      "公式サイトのリンクプレビューを EdgeEver のブランド画像に更新しました。",
-      "デスクトップのバックアップ保持数の表記を明確にし、設定画面の読みやすさを改善しました。"
+      "化学式と化学反応式を挿入でき、数式の挿入・編集後も自然に入力を続けられます。",
+      "共有QRコードをPNGまたはSVGで保存でき、PNGの画像サイズも統一されます。",
+      "添付ファイルの復元と共有リソースの安全性を強化し、不正な復元コンテンツによるスクリプト実行を防ぎます。",
+      "親ノートブックの同期前に作成したノートや子ノートブックが同期待ちのままになる問題を修正します。",
+      "HTMLラベルを含むMermaid図の拡大表示を修正し、サブグラフのコンパクトな配置を改善します。",
+      "画像アップロード中のドロップ位置を保持し、全画像削除後の空ギャラリーを除去して、画像操作の表示を整えます。",
+      "1~2~3のような単一チルダを含む文章が誤って取り消し線になる問題を修正します。",
+      "無題の共有ページやリンクプレビューに簡体字中国語の既定タイトルが表示される問題を修正します。"
     ]
   }
 }

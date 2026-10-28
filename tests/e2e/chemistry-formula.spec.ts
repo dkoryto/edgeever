@@ -68,8 +68,8 @@ test("inserts chemistry examples inline and as a display formula, then reopens t
     await expect(editor.locator(".katex").first()).toBeVisible();
 
     // Display: start from an example and add the gas arrow by hand.
-    // After a formula is applied, the first click only focuses the editor again
-    // (same as on main for any formula), so the caret is placed by a second click.
+    // An automated click right after the dialog closes can lose to ProseMirror
+    // restoring its selection on focus (see #719), so the caret is placed twice.
     await editor.getByText("Reaction below").click();
     await editor.getByText("Reaction below").click();
     await page.keyboard.press("End");

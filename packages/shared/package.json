@@ -24,6 +24,7 @@
     "./i18n/ru": "./src/i18n/ru.ts",
     "./i18n/locales": "./src/i18n/locales.ts",
     "./memo-template-seeds": "./src/memo-template-seeds.ts",
+    "./memo-template-gallery": "./src/memo-template-gallery.ts",
     "./default-workspace-seeds": "./src/default-workspace-seeds.ts",
     "./mathematics": "./src/mathematics.ts",
     "./mobile-editor": "./src/mobile-editor.ts",

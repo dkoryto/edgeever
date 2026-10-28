@@ -4,6 +4,7 @@ import {
   type CreateEdgeEverDocumentExtensionsOptions,
 } from "./document-extensions";
 import { MERGE_DIVIDER_NODE_TYPE } from "./merge-divider";
+import { DEFAULT_MEMO_TITLE } from "./memo-title";
 import { PDF_ATTACHMENT_NODE_TYPE, upgradeStandalonePdfLinks } from "./pdf-attachment";
 import { FILE_ATTACHMENT_NODE_TYPE, upgradeStandaloneFileLinks } from "./file-attachment";
 import {
@@ -77,16 +78,7 @@ export type TiptapDoc = {
   content: TiptapNode[];
 };
 
-export const DEFAULT_MEMO_TITLE = "无标题笔记";
-
-/**
- * Title to show for a note. Untitled notes are stored with the zh-CN default
- * title, so it is replaced by the reader's localized label like an empty one.
- */
-export const getMemoDisplayTitle = (title: string | null | undefined, untitledLabel: string) => {
-  const trimmed = title?.trim() ?? "";
-  return trimmed && trimmed !== DEFAULT_MEMO_TITLE ? trimmed : untitledLabel;
-};
+export { DEFAULT_MEMO_TITLE, getMemoDisplayTitle } from "./memo-title";
 
 export const resolveMergedMemoTitle = (
   inputTitle: string | null | undefined,

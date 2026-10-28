@@ -71,6 +71,7 @@ import {
   ImageUploadPlaceholderExtension,
   addImageUploadPlaceholder,
   createResourceUploadPlaceholder,
+  getImageUploadPlaceholderPosition,
   removeImageUploadPlaceholder,
   waitForImageSourceReady,
   updateImageUploadPlaceholder,
@@ -1050,7 +1051,7 @@ const RichEditorPane = ({
     }
   }, [repository, t]);
 
-  const insertResourceFiles = useCallback((files: File[]) => {
+  const insertResourceFiles = useCallback((files: File[], dropPosition?: number) => {
     const currentMemo = memoRef.current;
     const currentEditor = editorRef.current;
 
@@ -1067,7 +1068,7 @@ const RichEditorPane = ({
       memoRef.current?.id,
     );
     const interactionVersionAtRequest = editorCanvasInteractionVersionRef.current;
-    const placeholderPosition = currentEditor.state.selection.from;
+    const placeholderPosition = dropPosition ?? currentEditor.state.selection.from;
     const placeholderByFile = new Map(files.map((file) => [file,
       createResourceUploadPlaceholder(file, {
         imagePreparing: t("editor.uploadState.imagePreparing"),
@@ -1095,7 +1096,7 @@ const RichEditorPane = ({
 
         // Read the selection only after earlier resource insertions complete.
         // Rapid consecutive pastes otherwise race with the same stale cursor.
-        const insertionTarget = getResourceInsertionTarget(insertionEditor.state.selection);
+        const insertionTarget = dropPosition ?? getResourceInsertionTarget(insertionEditor.state.selection);
         setImageUploadState("uploading");
         const imageReadiness: Promise<void>[] = [];
 
@@ -1182,8 +1183,16 @@ const RichEditorPane = ({
         });
 
         if (content.length > 0) {
+          // Drop anchors follow every document transaction, including edits made
+          // while this upload was queued. Never fall back to an unrelated caret
+          // if the user deleted the drop location or reset the document.
+          const mappedDropPosition = dropPosition === undefined ? undefined
+            : getImageUploadPlaceholderPosition(activeEditor.state, placeholders[0]!.id);
+          if (mappedDropPosition === null) {
+            throw new Error("The attachment drop location no longer exists");
+          }
           const safeInsertionTarget = clampResourceInsertionTarget(
-            insertionTarget,
+            mappedDropPosition ?? insertionTarget,
             activeEditor.state.doc.content.size,
           );
           const updateSelection = shouldSelectInsertedResources(
@@ -1424,7 +1433,12 @@ const RichEditorPane = ({
         }
 
         event.preventDefault();
-        insertResourceFiles(getResourceFilesFromDataTransfer(event.dataTransfer));
+        // Use the same coordinate lookup as ProseMirror's external drop cursor.
+        // A drop inserts at a point; it must never replace the old text selection.
+        const dropPosition = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        if (dropPosition) {
+          insertResourceFiles(getResourceFilesFromDataTransfer(event.dataTransfer), dropPosition.pos);
+        }
         return true;
       },
     },

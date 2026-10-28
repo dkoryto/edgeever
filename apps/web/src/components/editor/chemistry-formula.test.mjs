@@ -35,13 +35,54 @@ describe("chemistry formulas in the formula dialog", () => {
     expect(renderMathPreview("\\ce{H2O", "inline")).toBe("");
   });
 
-  test("inserts an example into an empty field, at the caret, or inside an open \\ce", () => {
-    expect(insertChemistryExample("", 0, 0, "\\ce{H2O}")).toEqual({ value: "\\ce{H2O}", caret: 8 });
-    expect(insertChemistryExample("Water:", 6, 6, "\\ce{H2O}")).toEqual({ value: "Water: \\ce{H2O}", caret: 15 });
-    expect(insertChemistryExample("a  b", 2, 2, "\\ce{H2O}")).toEqual({ value: "a \\ce{H2O} b", caret: 10 });
-    const inside = "\\ce{A -> }";
-    expect(insertChemistryExample(inside, 9, 9, "\\ce{H2O}")).toEqual({ value: "\\ce{A -> H2O}", caret: 12 });
-    expect(insertChemistryExample("\\ce{X}", 0, 6, "\\pu{1 mol}")).toEqual({ value: "\\pu{1 mol}", caret: 10 });
+  // `|` marks the caret (or `[…]` a selection) in the field before the example is inserted.
+  const insertAt = (template, example) => {
+    const start = template.includes("[") ? template.indexOf("[") : template.indexOf("|");
+    const value = template.replace(/[|[\]]/g, "");
+    const end = template.includes("]") ? template.indexOf("]") - 1 : start;
+    const result = insertChemistryExample(value, start, end, example);
+    return `${result.value.slice(0, result.caret)}|${result.value.slice(result.caret)}`;
+  };
+
+  test("inserts an example into an empty field, at the caret, or inside an open command of the same kind", () => {
+    expect(insertAt("|", "\\ce{H2O}")).toBe("\\ce{H2O}|");
+    expect(insertAt("Water:|", "\\ce{H2O}")).toBe("Water: \\ce{H2O}|");
+    expect(insertAt("a |b", "\\ce{H2O}")).toBe("a \\ce{H2O} |b");
+    expect(insertAt("\\ce{A -> |2H2O}", "\\pu{1 mol}")).toBe("\\ce{A -> \\pu{1 mol} |2H2O}");
+    expect(insertAt("\\ce{A + |B}", "\\ce{H2O}")).toBe("\\ce{A + H2O |B}");
+    expect(insertAt("\\ce{A -> |}", "\\ce{H2O}")).toBe("\\ce{A -> H2O|}");
+    expect(insertAt("\\pu{5 |}", "\\pu{123 kJ/mol}")).toBe("\\pu{5 123 kJ/mol|}");
+    expect(insertAt("[\\ce{X}]", "\\pu{1 mol}")).toBe("\\pu{1 mol}|");
+  });
+
+  test("keeps the whole command when the caret is inside a different command", () => {
+    // Review case: Ion inside \pu used to become \pu{5 SO4^2-} ("Double superscript").
+    expect(insertAt("\\pu{5 |}", "\\ce{SO4^2-}")).toBe("\\pu{5 \\ce{SO4^2-}|}");
+    expect(insertAt("\\ce{A -> |}", "\\pu{123 kJ/mol}")).toBe("\\ce{A -> \\pu{123 kJ/mol}|}");
+    expect(renderMathPreview("\\pu{5 \\ce{SO4^2-}}", "inline")).toContain('class="katex"');
+    expect(renderMathPreview("\\ce{A -> \\pu{123 kJ/mol}}", "inline")).toContain('class="katex"');
+  });
+
+  test("finds the enclosing command past nested groups and escaped braces", () => {
+    expect(insertAt("\\ce{^{14}_{6}C + |}", "\\ce{H2O}")).toBe("\\ce{^{14}_{6}C + H2O|}");
+    expect(insertAt("\\ce{^{14}_{6}C + |}", "\\pu{1 mol}")).toBe("\\ce{^{14}_{6}C + \\pu{1 mol}|}");
+    // The innermost open command decides: \ce nested inside \pu.
+    expect(insertAt("\\pu{5 \\ce{A + |}}", "\\ce{H2O}")).toBe("\\pu{5 \\ce{A + H2O|}}");
+    expect(insertAt("\\pu{5 \\ce{A} |}", "\\ce{H2O}")).toBe("\\pu{5 \\ce{A} \\ce{H2O}|}");
+    // A closed command before the caret does not count.
+    expect(insertAt("\\pu{5 mol} and |", "\\ce{H2O}")).toBe("\\pu{5 mol} and \\ce{H2O}|");
+    expect(insertAt("\\ce{\\{ |}", "\\ce{H2O}")).toBe("\\ce{\\{ H2O|}");
+  });
+
+  test("every example inserted into every kind of context still renders", () => {
+    const contexts = ["|", "x = |", "\\ce{A -> |}", "\\ce{^{14}_{6}C + |}", "\\pu{5 |}", "\\ce{H2O} and |", "\\pu{5 \\ce{A + |}}"];
+    for (const context of contexts) {
+      for (const example of CHEMISTRY_EXAMPLES) {
+        const result = insertAt(context, example.latex).replace("|", "");
+        expect({ context, example: example.key, rendered: renderMathPreview(result, "inline") !== "" })
+          .toEqual({ context, example: example.key, rendered: true });
+      }
+    }
   });
 
   test("the dialog keeps chemistry out of the visual math editor and uses shadcn tooltips", () => {

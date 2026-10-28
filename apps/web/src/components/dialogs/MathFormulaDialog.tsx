@@ -118,8 +118,9 @@ export const MathFormulaDialog = ({
           </DialogTitle>
         </DialogHeader>
 
+        {/* min-w-0: a long formula scrolls inside the preview instead of widening the dialog. */}
         <form
-          className="space-y-4 px-5 py-4"
+          className="min-w-0 space-y-4 px-5 py-4"
           onSubmit={(event) => {
             event.preventDefault();
             submit();

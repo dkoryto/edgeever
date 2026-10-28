@@ -146,3 +146,45 @@ test("renders stored chemistry in the editor and on the public share page", asyn
     await deleteMemo(page, memo.id);
   }
 });
+
+test("examples keep their command inside a different command and unwrap inside the same one", async ({ page }) => {
+  const title = `Chemistry nesting ${Date.now()}`;
+  const memo = await createMemo(page, title, "Energy");
+  try {
+    const editor = await openMemo(page, memo.id, title);
+    await editor.getByText("Energy").click();
+    await page.keyboard.press("End");
+    await page.getByRole("button", { name: "Insert formula" }).click();
+    const dialog = page.getByRole("dialog");
+    const source = dialog.locator("textarea");
+    await dialog.getByRole("button", { name: "Chemistry" }).click();
+
+    // Review case: an ion inside \pu stays a \ce command instead of "Double superscript".
+    await source.fill("\\pu{5 }");
+    await source.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(6, 6));
+    await dialog.getByRole("button", { name: "Ion", exact: true }).click();
+    await expect(source).toHaveValue("\\pu{5 \\ce{SO4^2-}}");
+    await expect(dialog.locator(".katex")).toBeVisible();
+    await expect(dialog.locator(RENDER_ERROR)).toHaveCount(0);
+
+    // Units inside a reaction keep \pu; a formula inside the same \ce is unwrapped.
+    await source.fill("\\ce{A -> }");
+    await source.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(9, 9));
+    await dialog.getByRole("button", { name: "Units", exact: true }).click();
+    await expect(source).toHaveValue("\\ce{A -> \\pu{123 kJ/mol}}");
+    // The dialog moves the caret after the inserted example on the next frame.
+    await expect.poll(() => source.evaluate((element: HTMLTextAreaElement) => element.selectionStart)).toBe(24);
+    await source.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(5, 5));
+    await dialog.getByRole("button", { name: "Formula", exact: true }).click();
+    await expect(source).toHaveValue("\\ce{A H2O -> \\pu{123 kJ/mol}}");
+    await expect(dialog.locator(RENDER_ERROR)).toHaveCount(0);
+
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(editor.locator("[data-type='inline-math']")).toHaveCount(1);
+    await expect(editor.locator(RENDER_ERROR)).toHaveCount(0);
+    await expect.poll(savedMarkdown(page, memo.id), { timeout: 20_000 }).toContain("$\\ce{A H2O -> \\pu{123 kJ/mol}}$");
+  } finally {
+    await deleteMemo(page, memo.id);
+  }
+});

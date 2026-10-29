@@ -2041,6 +2041,7 @@ export const zhCN = {
     openFolder: "打开文件夹",
     never: "尚未完成",
     lastSuccess: "上次成功备份：{{time}}",
+    lastBackupSize: "最近备份大小：{{size}}",
     nextDue: "下次自动检查：{{time}}",
     whenReady: "应用就绪后",
     stagingWarning: "私有临时文件清理失败。请检查应用数据目录权限并重启。",

@@ -2030,6 +2030,7 @@ export const ja = {
     openFolder: "フォルダーを開く",
     never: "未完了",
     lastSuccess: "前回のバックアップ成功：{{time}}",
+    lastBackupSize: "最新のバックアップサイズ：{{size}}",
     nextDue: "次回の自動確認：{{time}}",
     whenReady: "アプリの準備ができ次第",
     stagingWarning: "非公開の一時ファイルを削除できません。データフォルダーの権限を確認し、再起動してください。",

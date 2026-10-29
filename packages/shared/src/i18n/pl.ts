@@ -2030,6 +2030,7 @@ export const pl = {
     openFolder: "Otwórz folder",
     never: "Jeszcze nie",
     lastSuccess: "Ostatnia udana kopia: {{time}}",
+    lastBackupSize: "Rozmiar ostatniej kopii: {{size}}",
     nextDue: "Następne automatyczne sprawdzenie: {{time}}",
     whenReady: "Gdy aplikacja będzie gotowa",
     stagingWarning: "Nie usunięto prywatnych plików tymczasowych. Sprawdź uprawnienia folderu danych i uruchom aplikację ponownie.",

@@ -2041,6 +2041,7 @@ export const enUS = {
     openFolder: "Open folder",
     never: "Not yet",
     lastSuccess: "Last successful backup: {{time}}",
+    lastBackupSize: "Latest backup size: {{size}}",
     nextDue: "Next automatic check: {{time}}",
     whenReady: "When the app is ready",
     stagingWarning: "Private temporary files could not be removed. Check the app data folder permissions and restart.",

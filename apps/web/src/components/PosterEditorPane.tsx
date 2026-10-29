@@ -107,6 +107,7 @@ import { AiSidebar, readAiSidebarOpen, writeAiSidebarOpen } from "./ai-sidebar/A
 import { AiSidebarErrorBoundary } from "./ai-sidebar/AiSidebarErrorBoundary";
 import { getNotebookMoveOptions } from "@/lib/app-helpers";
 import { parseTagsText } from "@/lib/utils";
+import { prefersChineseContent } from "@/lib/bilingual-content-locale";
 
 const artwork = (document: PosterDocument) =>
   JSON.stringify({ ...document, previewResourceId: undefined });
@@ -141,7 +142,7 @@ export default function PosterEditorPane({
   companionAvailable = false, beforeCompanionApply, onCompanionNotesChanged,
 }: Props) {
   const { t, i18n } = useTranslation();
-  const zh = i18n.language.startsWith("zh");
+  const zh = prefersChineseContent(i18n.language);
   const initial = useMemo(
     () => parsePosterDocument(memo.contentMarkdown),
     [memo.contentMarkdown],

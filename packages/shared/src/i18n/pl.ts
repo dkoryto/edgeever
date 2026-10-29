@@ -2176,6 +2176,10 @@ export const pl = {
     confirmImport: "Importuj",
   },
   shortcuts: {
+    globalSectionTitle: "Skróty globalne",
+    globalSectionTip: "Działają w innych aplikacjach; zapisane tylko na tym urządzeniu",
+    appSectionTitle: "Skróty",
+    appSectionTip: "Aktywne, gdy okno jest aktywne",
     global: {
       label: "Pokaż lub ukryj okno aplikacji",
       description: "Działa także w innych aplikacjach. Skrót jest zapisany tylko na tym urządzeniu.",
@@ -2939,6 +2943,11 @@ export const pl = {
     copied: "Skopiowano",
     copyFailed: "Nie udało się skopiować",
     open: "Otwórz udostępnioną notatkę",
+    openMarkdown: "Zobacz .md",
+    markdownRawLabel: "Surowy Markdown",
+    copyMarkdownLink: "Kopiuj link .md",
+    markdownHint: "Do kontekstu AI lub importu do innych aplikacji",
+    markdownPasswordProtectedHint: "Niedostępne z hasłem",
     revoke: "Wyłącz udostępnianie",
     error: "Nie udało się zaktualizować udostępniania. Spróbuj ponownie.",
     passwordToggle: "Hasło dostępu",

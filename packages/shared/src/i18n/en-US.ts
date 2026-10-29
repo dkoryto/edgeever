@@ -2187,6 +2187,10 @@ export const enUS = {
     confirmImport: "Import",
   },
   shortcuts: {
+    globalSectionTitle: "Global shortcuts",
+    globalSectionTip: "Works from other apps; saved only on this device",
+    appSectionTitle: "Shortcuts",
+    appSectionTip: "Active when the window is in focus",
     global: {
       label: "Show or hide desktop window",
       description: "Works from other apps. This shortcut is saved only on this device.",
@@ -2950,6 +2954,11 @@ export const enUS = {
     copied: "Copied",
     copyFailed: "Copy failed",
     open: "Open shared note",
+    openMarkdown: "View .md",
+    markdownRawLabel: "Raw Markdown",
+    copyMarkdownLink: "Copy .md link",
+    markdownHint: "Ideal for AI reference or importing into other apps",
+    markdownPasswordProtectedHint: "Unavailable with password",
     revoke: "Revoke sharing",
     error: "Sharing could not be updated. Please try again.",
     passwordToggle: "Access password",

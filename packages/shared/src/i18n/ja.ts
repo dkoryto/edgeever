@@ -2176,6 +2176,10 @@ export const ja = {
     confirmImport: "取り込む",
   },
   shortcuts: {
+    globalSectionTitle: "グローバルショートカット",
+    globalSectionTip: "他のアプリからでも使用可能（この端末にのみ保存）",
+    appSectionTitle: "ショートカット",
+    appSectionTip: "ウィンドウがアクティブなときに有効",
     global: {
       label: "デスクトップウィンドウの表示・非表示",
       description: "他のアプリからも使用できます。このショートカットはこの端末にのみ保存されます。",
@@ -2939,6 +2943,11 @@ export const ja = {
     copied: "コピーしました",
     copyFailed: "コピーに失敗",
     open: "共有ノートを開く",
+    openMarkdown: ".md を表示",
+    markdownRawLabel: "Raw Markdown",
+    copyMarkdownLink: ".md リンクをコピー",
+    markdownHint: "AI での参照や他アプリへの取り込み向け",
+    markdownPasswordProtectedHint: "パスワード設定時は利用不可",
     revoke: "共有を取り消す",
     error: "共有を更新できませんでした。再試行してください。",
     passwordToggle: "アクセスパスワード",

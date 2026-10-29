@@ -1,5 +1,7 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Slice } from "@tiptap/pm/model";
+import { ReplaceAroundStep } from "@tiptap/pm/transform";
 import { openBlockSource } from "./markdown-block-start";
 import type { TiptapDoc, TiptapNode, TiptapTextNode } from "./content";
 import { parseImageAlignment } from "./image-alignment";
@@ -159,40 +161,47 @@ const hasUsableImageSource = (node: TiptapNode | TiptapTextNode) =>
   typeof node.attrs?.src === "string" &&
   node.attrs.src.trim().length > 0;
 
-/** Keep node-view, keyboard and range deletions in the same undoable edit. */
+/**
+ * Repair galleries emptied or left with one image by a move or deletion, in
+ * the same undoable edit as the node-view, keyboard or range change.
+ */
 export const createImageGalleryCleanupPlugin = () => new Plugin({
   key: new PluginKey("edgeever-image-gallery-cleanup"),
   appendTransaction(transactions, _oldState, state) {
     if (!transactions.some((transaction) => transaction.docChanged)) return null;
 
-    const galleries: Array<{ from: number; to: number; empty: boolean }> = [];
+    const repairs: Array<{ from: number; to: number; unwrap: boolean }> = [];
     state.doc.descendants((node, position) => {
       if (node.type.name !== IMAGE_GALLERY_NODE_TYPE) return;
       // image+ makes ProseMirror insert an image with src=null when its last
       // child is deleted. Remove that shell from the live document as well as
       // saved snapshots. Pending uploads have a nonempty src and stay intact.
-      const empty = !node.content.content.some((image) =>
+      const images = node.content.content.filter((image) =>
         typeof image.attrs.src === "string" && image.attrs.src.trim().length > 0
       );
-      if (empty || node.childCount === 1) {
-        galleries.push({ from: position, to: position + node.nodeSize, empty });
+      if (!images.length) {
+        repairs.push({ from: position, to: position + node.nodeSize, unwrap: false });
+      } else if (node.childCount === 1 && !isTransientImageUploadSource(images[0]!.attrs.src)) {
+        // A gallery left with one image after a move or deletion would crop it
+        // to the gallery cell. Unwrap it as normalizeImageGalleries() does for
+        // snapshots, so the editor shows the standalone image that is saved.
+        repairs.push({ from: position, to: position + node.nodeSize, unwrap: true });
       }
       return false;
     });
-    if (!galleries.length) return null;
+    if (!repairs.length) return null;
 
     const transaction = state.tr;
-    for (const { from, to, empty } of galleries.reverse()) {
-      if (empty) {
+    for (const { from, to, unwrap } of repairs.reverse()) {
+      if (!unwrap) {
         transaction.delete(from, to);
-      } else {
-        // Lift instead of replacing the image so selections and upload positions
-        // map through the removed wrapper, retaining every image attribute.
-        const range = transaction.doc.resolve(from + 1).blockRange(transaction.doc.resolve(to - 1));
-        if (range) transaction.lift(range, range.depth - 1);
+        continue;
       }
+      // Remove only the wrapper, as lift() would if the gallery were not
+      // isolating, so the image and a selection on it keep their identity.
+      transaction.maybeStep(new ReplaceAroundStep(from, to, from + 1, to - 1, Slice.empty, 0, true));
     }
-    return transaction;
+    return transaction.docChanged ? transaction : null;
   },
 });
 

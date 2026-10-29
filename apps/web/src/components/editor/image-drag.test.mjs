@@ -13,7 +13,7 @@ const schema = getSchema([StarterKit, Image.extend({ addAttributes() {
 const image = (src) => schema.nodes.image.create({ src, alt: `alt ${src}`, title: `title ${src}`, width: 42, alignment: "right" });
 const paragraph = (text) => schema.nodes.paragraph.create(null, schema.text(text));
 const gallery = (...names) => schema.nodes.edgeeverImageGallery.create({ layout: "3", fit: "height" }, names.map(image));
-const state = (...nodes) => EditorState.create({ doc: schema.nodes.doc.create(null, nodes), plugins: [history(), createImageDragPlugin(), createImageGalleryCleanupPlugin()] });
+const state = (...nodes) => EditorState.create({ doc: schema.nodes.doc.create(null, nodes), plugins: [history(), createImageDragPlugin()] });
 const move = (before, from, to) => {
   const tr = moveImage(before, from, to);
   expect(tr).not.toBeNull();
@@ -52,9 +52,25 @@ describe("existing image dragging (#708)", () => {
     expect(next.doc.childCount).toBe(1);
     expect(sources(next.doc)).toEqual(["B", "A", "C"]);
   });
+  test("moving one image out of a two-image gallery leaves the other standalone (#728)", () => {
+    // The editor runs the gallery cleanup plugin alongside dragging.
+    const before = EditorState.create({
+      doc: schema.nodes.doc.create(null, [gallery("A", "B"), paragraph("text")]),
+      plugins: [history(), createImageDragPlugin(), createImageGalleryCleanupPlugin()],
+    });
+    let next = move(before, 2, before.doc.content.size);
+    const moved = next.doc.toJSON();
+    expect(moved).toEqual(schema.nodes.doc.create(null, [image("A"), paragraph("text"), image("B")]).toJSON());
+    expect(next.doc.firstChild).toBe(before.doc.firstChild.firstChild);
+    expect(next.selection.node.attrs.src).toBe("B");
+    expect(undo(next, (tr) => { next = next.applyTransaction(tr).state; })).toBe(true);
+    expect(next.doc.toJSON()).toEqual(before.doc.toJSON());
+    expect(redo(next, (tr) => { next = next.applyTransaction(tr).state; })).toBe(true);
+    expect(next.doc.toJSON()).toEqual(moved);
+  });
   test("one undo restores the original document; redo repeats the move", () => {
-    const before = state(gallery("A", "D"), paragraph("text"), gallery("B", "C"));
-    let next = move(before, 1, before.doc.content.size - 1);
+    const before = state(gallery("A"), paragraph("text"), gallery("B", "C"));
+    let next = move(before, 1, 11);
     const moved = next.doc.toJSON();
     expect(undo(next, (tr) => { next = next.applyTransaction(tr).state; })).toBe(true);
     expect(next.doc.toJSON()).toEqual(before.doc.toJSON());
@@ -96,11 +112,13 @@ describe("existing image dragging (#708)", () => {
   });
 });
 
-
 describe("dragging out of a two-image gallery (#728)", () => {
   for (const from of [1, 2]) {
     test(`moving image ${from} preserves attributes, selection and one-step undo`, () => {
-      const before = state(gallery("A", "B"), paragraph("text"));
+      const before = EditorState.create({
+        doc: schema.nodes.doc.create(null, [gallery("A", "B"), paragraph("text")]),
+        plugins: [history(), createImageDragPlugin(), createImageGalleryCleanupPlugin()],
+      });
       const moved = before.doc.nodeAt(from);
       const survivor = before.doc.firstChild.child(from === 1 ? 1 : 0);
       let next = move(before, from, before.doc.content.size);

@@ -120,6 +120,14 @@ interface EdgeEverDesktopBridge {
   readResource(id: string): Promise<{ type: string; bytes: Uint8Array }>;
   removeStagedResource(id: string): Promise<void>;
   onCommand(callback: (command: string) => void): () => void;
+  noteWindows?(): Promise<string[]>;
+  openNoteWindow?(memoId: string): Promise<{ opened: boolean }>;
+  focusNoteWindow?(memoId: string): Promise<boolean>;
+  onNoteWindowsChanged?(callback: (memoIds: string[]) => void): () => void;
+  onNoteWindowCloseRequest?(callback: () => void): () => void;
+  resolveNoteWindowClose?(allowed: boolean): void;
+  notifyNoteWindowSaved?(): void;
+  openMemoInMainWindow?(memoId: string): Promise<boolean>;
   setRichTextHeadingShortcutActive?(active: boolean): void;
   onHeadingShortcut?(callback: (level: number) => void): () => void;
   onHibernatePrepare?(callback: () => void | Promise<void>): () => void;

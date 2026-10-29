@@ -66,6 +66,7 @@ import { createAiDirectRuntime } from "./ai-direct.mjs";
 import { createAcpPathStore, validateTrustedAcpPath } from "./acp-path-store.mjs";
 import { createAcpHostRuntime, registerAcpIpc } from "./acp-host.mjs";
 import { shouldQuitAfterAllWindowsClosed } from "./window-lifecycle.mjs";
+import { createNoteWindowController, isValidNoteWindowMemoId, noteWindowUrl } from "./note-windows.mjs";
 import {
   commandLineOpensContent,
   createLoginItemController,
@@ -89,6 +90,7 @@ import {
 
 const { autoUpdater } = electronUpdater;
 const headingShortcutGuard = createHeadingShortcutGuard();
+const noteWindowHeadingShortcutGuards = new WeakMap();
 
 const linuxUpdateTestMode = process.platform === "linux"
   && process.env.GITHUB_ACTIONS === "true"
@@ -949,6 +951,13 @@ const buildApplicationMenu = () => {
         { label: copy.newMemo, accelerator: "CmdOrCtrl+N", click: () => sendDesktopCommand("new-memo") },
         { label: copy.newNotebook, accelerator: "CmdOrCtrl+Shift+N", click: () => sendDesktopCommand("new-notebook") },
         { type: "separator" },
+        {
+          label: copy.openNoteWindow,
+          accelerator: "CmdOrCtrl+Shift+O",
+          // A note window already shows its note on its own.
+          click: () => { if (!noteWindows.isNoteWindowContents(BrowserWindow.getFocusedWindow()?.webContents)) sendDesktopCommand("open-memo-window"); },
+        },
+        { type: "separator" },
         { label: copy.close, role: "close" },
       ],
     },
@@ -1723,6 +1732,66 @@ const createWindow = async ({ show = true } = {}) => {
   buildApplicationMenu();
 };
 
+const createNoteWindow = (memoId) => {
+  const bounds = mainWindow && !mainWindow.isDestroyed() ? mainWindow.getBounds() : null;
+  const offset = 32 * (noteWindows.list().length + 1);
+  const window = new BrowserWindow({
+    width: 860,
+    height: 760,
+    ...(bounds ? { x: bounds.x + offset, y: bounds.y + offset } : {}),
+    minWidth: 480,
+    minHeight: 400,
+    show: false,
+    webPreferences: {
+      preload: join(currentDirectory, "../preload/index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  window.once("ready-to-show", () => showWindow(window));
+  attachEditContextMenu(window.webContents);
+  const windowHeadingShortcutGuard = createHeadingShortcutGuard();
+  windowHeadingShortcutGuard.attach(window.webContents);
+  noteWindowHeadingShortcutGuards.set(window.webContents, windowHeadingShortcutGuard);
+  const rendererEntryUrl = desktopRendererEntryUrl();
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!isAllowedAppNavigation(url, rendererEntryUrl)) event.preventDefault();
+    else if (isResourceDownloadUrl(url)) window.webContents.downloadURL(url);
+  });
+  window.webContents.on("will-redirect", (event, url) => {
+    if (!isAllowedAppNavigation(url, rendererEntryUrl)) event.preventDefault();
+  });
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://") || url.startsWith("http://")) void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  window.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    void writeDiagnostic("note-window.load-failed", { errorCode, errorDescription, validatedURL, isMainFrame });
+  });
+  window.webContents.on("render-process-gone", (_event, details) => {
+    void writeDiagnostic("note-window.renderer-gone", details);
+  });
+  void window.loadURL(noteWindowUrl(rendererEntryUrl, memoId)).catch((error) => {
+    void writeDiagnostic("note-window.navigation-rejected", { message: String(error?.message || error).slice(0, 2000) });
+  });
+  return window;
+};
+
+const noteWindows = createNoteWindowController({
+  createWindow: createNoteWindow,
+  showWindow,
+  onChange: (memoIds) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("desktop:note-windows-changed", memoIds);
+  },
+});
+
+// Note windows run the same app code as the main window and may use its
+// renderer features; account, instance and global settings stay main-only.
+const isAppRendererSender = (event) => (
+  event.sender === mainWindow?.webContents || noteWindows.isNoteWindowContents(event.sender)
+) && event.senderFrame === event.sender.mainFrame;
+
 const confirmMacInstallation = async () => {
   if (!app.isPackaged || process.platform !== "darwin" || existsSync(installationMarkerPath())) return;
 
@@ -1915,6 +1984,8 @@ const startApplication = async () => {
       await refreshBackupContext(); void backupManager.tick();
       return { ready: true, scope: nextScopeKey };
     }
+    // Let open note windows save into the current account before it changes.
+    await noteWindows.closeAll();
     if (backupManager.context?.baseUrl !== configuredApiBaseUrl || backupManager.context?.accountId !== normalizedAccountId) await backupManager.setContext(null);
     await stopSidecar();
     const nextSidecar = await startSidecar(normalizedAccountId);
@@ -1924,8 +1995,12 @@ const startApplication = async () => {
     return { ready: true, scope: nextScopeKey };
   });
   ipcMain.on("desktop:rich-text-heading-shortcut", (event, active) => {
-    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) return;
-    headingShortcutGuard.setActive(active);
+    // sendSync blocks the renderer until a value is returned, so always answer.
+    if (!isAppRendererSender(event)) {
+      event.returnValue = false;
+      return;
+    }
+    (noteWindowHeadingShortcutGuards.get(event.sender) ?? headingShortcutGuard).setActive(active);
     event.returnValue = true;
   });
   ipcMain.on("desktop:renderer-ready", (event) => {
@@ -1943,7 +2018,7 @@ const startApplication = async () => {
   });
   ipcMain.on("desktop:api-base-url-sync", (event) => { event.returnValue = configuredApiBaseUrl; });
   ipcMain.on("desktop:session-token-sync", (event) => {
-    event.returnValue = event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame
+    event.returnValue = isAppRendererSender(event)
       ? credentialForUrl(desktopSessionToken, desktopSessionTokenOrigin, configuredApiBaseUrl) : "";
   });
   ipcMain.on("desktop:recovered-after-abnormal-exit-sync", (event) => { event.returnValue = recoveredAfterAbnormalExit; });
@@ -1967,13 +2042,14 @@ const startApplication = async () => {
   });
   ipcMain.handle("desktop:clear-session-token", async (event) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame || instanceChangePending) throw new Error("Session update forbidden");
+    await noteWindows.closeAll();
     scheduledTaskScheduler.clear();
     await backupManager.setContext(null);
     await saveDesktopSessionToken("");
     return { stored: false };
   });
   ipcMain.handle("desktop:picgo-test", (event, input) => {
-    if (event.sender !== mainWindow?.webContents) throw new Error("PicGo requests must come from the main window");
+    if (!isAppRendererSender(event)) throw new Error("PicGo requests must come from the main window");
     const target = input && typeof input === "object" ? input : { endpoint: input, serverKey: "" };
     return testPicGoConnection(target.endpoint, { serverKey: target.serverKey });
   });
@@ -1991,8 +2067,9 @@ const startApplication = async () => {
     },
   });
   ipcMain.handle("desktop:picgo-upload", (event, input) => {
-    if (event.sender !== mainWindow?.webContents) throw new Error("PicGo requests must come from the main window");
-    return queuePicGoUpload(input, () => event.sender === mainWindow?.webContents && !event.sender.isDestroyed());
+    if (!isAppRendererSender(event)) throw new Error("PicGo requests must come from the main window");
+    const sender = event.sender;
+    return queuePicGoUpload(input, () => !sender.isDestroyed() && (sender === mainWindow?.webContents || noteWindows.isNoteWindowContents(sender)));
   });
   ipcMain.handle("desktop:public-network-fetch", async (event, requestId, input) => {
     if (event.sender !== mainWindow?.webContents) throw new Error("Public network requests must come from the main window");
@@ -2002,7 +2079,7 @@ const startApplication = async () => {
     if (event.sender === mainWindow?.webContents && typeof requestId === "string") pluginPublicNetwork.cancel(requestId);
   });
   ipcMain.handle("desktop:ai-direct-open", async (event, requestId, input) => {
-    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error("AI provider requests must come from the main window");
+    if (!isAppRendererSender(event)) throw new Error("AI provider requests must come from the main window");
     const sender = event.sender;
     return aiDirect.open(requestId, input, {
       onData: (bytes) => {
@@ -2023,7 +2100,7 @@ const startApplication = async () => {
     });
   });
   ipcMain.on("desktop:ai-direct-cancel", (event, requestId) => {
-    if (event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame && typeof requestId === "string") aiDirect.cancel(requestId);
+    if (isAppRendererSender(event) && typeof requestId === "string") aiDirect.cancel(requestId);
   });
   const acpRuntime = registerAcpIpc(ipcMain, createAcpHostRuntime({
     executablePath: backgroundNodeExecutable(process.execPath),
@@ -2074,9 +2151,36 @@ const startApplication = async () => {
     return { scheduled: scheduledTaskScheduler.entries.size };
   });
   ipcMain.handle("desktop:record-renderer-error", async (event, details) => {
-    if (event.sender !== mainWindow?.webContents) throw new Error("Renderer diagnostics must come from the main window");
+    if (!isAppRendererSender(event)) throw new Error("Renderer diagnostics must come from the main window");
     await writeDiagnostic("renderer.react-error", normalizeDesktopDiagnostic(details));
     return { recorded: true };
+  });
+  ipcMain.handle("desktop:note-windows", (event) => (
+    event.sender === mainWindow?.webContents ? noteWindows.list() : []
+  ));
+  ipcMain.handle("desktop:open-note-window", (event, memoId) => {
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error("Note windows must be opened from the main window");
+    if (!isValidNoteWindowMemoId(memoId)) throw new Error("Invalid note id");
+    return noteWindows.open(memoId);
+  });
+  ipcMain.handle("desktop:focus-note-window", (event, memoId) => (
+    event.sender === mainWindow?.webContents && isValidNoteWindowMemoId(memoId) ? noteWindows.focus(memoId) : false
+  ));
+  ipcMain.on("desktop:note-window-listening", (event) => {
+    if (isAppRendererSender(event)) noteWindows.markListening(event.sender);
+  });
+  ipcMain.on("desktop:note-window-close-result", (event, allowed) => {
+    if (isAppRendererSender(event)) noteWindows.resolveClose(event.sender, allowed === true);
+  });
+  ipcMain.on("desktop:note-window-saved", (event) => {
+    const memoId = isAppRendererSender(event) ? noteWindows.memoIdForContents(event.sender) : null;
+    if (memoId) sendDesktopCommand(`note-window-saved:${memoId}`);
+  });
+  ipcMain.handle("desktop:open-memo-in-main-window", (event, memoId) => {
+    if (!isAppRendererSender(event) || !noteWindows.isNoteWindowContents(event.sender) || !isValidNoteWindowMemoId(memoId)) return false;
+    showWindow(mainWindow);
+    sendDesktopCommand(`open-memo:${memoId}`);
+    return true;
   });
   ipcMain.handle("desktop:open-renderer-issue", async (event, details) => {
     if (event.sender !== mainWindow?.webContents) throw new Error("Renderer issue reports must come from the main window");
@@ -2088,6 +2192,7 @@ const startApplication = async () => {
     if (process.platform !== "darwin" || !app.isPackaged) throw new Error("Local data reset is only available in the packaged macOS app");
     if (requestedUserDataDirectory) throw new Error("Local data reset is unavailable with a custom user-data directory");
     if (localDataResetScheduled) return { scheduled: true };
+    await noteWindows.closeAll();
 
     try {
       await scheduleMacLocalDataReset({
@@ -2171,9 +2276,12 @@ const startApplication = async () => {
           buttons: chinese ? ["取消", "切换实例"] : ["Cancel", "Switch instance"], defaultId: 0, cancelId: 0,
         });
         if (answer.response !== 1) throw new Error("Instance change cancelled");
+        await noteWindows.closeAll();
         await backupManager.setContext(null);
         await saveDesktopSessionToken("");
       }
+      // Note windows save into the current instance before it changes.
+      await noteWindows.closeAll();
       scheduledTaskScheduler.clear();
       await backupManager.setContext(null);
       const temporaryInstancePath = `${instanceUrlPath()}.tmp`;
@@ -2458,6 +2566,7 @@ app.on("before-quit", (event) => {
   tray?.destroy();
   if (backupCheckTimer) clearInterval(backupCheckTimer);
   void (async () => {
+    await noteWindows.closeAll();
     await backupManager?.close();
     await releaseDesktopAcpSessions().catch(() => {});
     await stopSidecar();

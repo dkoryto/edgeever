@@ -120,6 +120,23 @@ contextBridge.exposeInMainWorld("edgeeverDesktop", Object.freeze({
     ipcRenderer.on("desktop:command", listener);
     return () => ipcRenderer.removeListener("desktop:command", listener);
   },
+  noteWindows: () => ipcRenderer.invoke("desktop:note-windows"),
+  openNoteWindow: (memoId) => ipcRenderer.invoke("desktop:open-note-window", memoId),
+  focusNoteWindow: (memoId) => ipcRenderer.invoke("desktop:focus-note-window", memoId),
+  onNoteWindowsChanged: (callback) => {
+    const listener = (_event, memoIds) => callback(Array.isArray(memoIds) ? memoIds : []);
+    ipcRenderer.on("desktop:note-windows-changed", listener);
+    return () => ipcRenderer.removeListener("desktop:note-windows-changed", listener);
+  },
+  onNoteWindowCloseRequest: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("desktop:note-window-close-request", listener);
+    ipcRenderer.send("desktop:note-window-listening");
+    return () => ipcRenderer.removeListener("desktop:note-window-close-request", listener);
+  },
+  resolveNoteWindowClose: (allowed) => ipcRenderer.send("desktop:note-window-close-result", allowed === true),
+  notifyNoteWindowSaved: () => ipcRenderer.send("desktop:note-window-saved"),
+  openMemoInMainWindow: (memoId) => ipcRenderer.invoke("desktop:open-memo-in-main-window", memoId),
   setRichTextHeadingShortcutActive: (active) => {
     ipcRenderer.sendSync("desktop:rich-text-heading-shortcut", active === true);
   },

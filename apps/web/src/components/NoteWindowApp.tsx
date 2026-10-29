@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { api, getCachedDesktopSession } from "@/lib/api";
 import { getPersistentDataScopeOrigin } from "@/lib/app-page-path";
 import { getShortcutActionForEvent, readImageCompressionPreference, readShortcutSettingsPreference } from "@/lib/app-helpers";
+import { noteWindowSyncCompletedDetail } from "@/lib/desktop-note-windows";
 import { createLocalDataScope, putLocalMemo } from "@/lib/local-mirror";
 import { updateMemoSummaryInLists } from "@/lib/memo-list-cache";
 import { EdgeEverPluginHost } from "@/lib/plugins/plugin-host";
@@ -20,7 +21,9 @@ const noop = () => undefined;
 /**
  * A desktop window that shows a single note. Loading, sync and plugins stay in
  * the main window; this window only edits the note, saves through the same
- * repository, and hands everything else back to the main window.
+ * repository, and hands everything else back to the main window. The main
+ * window forwards each sync result here so this editor tracks acknowledgements,
+ * remote changes and conflicts like the main editor does.
  */
 export const NoteWindowApp = ({ memoId }: { memoId: string }) => {
   const { t } = useTranslation();
@@ -77,6 +80,30 @@ export const NoteWindowApp = ({ memoId }: { memoId: string }) => {
   const deletedRef = useRef(false);
   const memo = memoQuery.data?.memo ?? null;
   const unsupported = Boolean(memo && (memo.isDeleted || parseDiagramDocument(memo.contentMarkdown) || hasTableDocumentMarker(memo.contentMarkdown)));
+  // A failed reload after a sync keeps the note it already shows; only a
+  // note that never loaded, or is gone or unsupported, leaves the editor.
+  const unavailable = (sessionQuery.isError && !sessionQuery.data) || (memoQuery.isError && !memo) || unsupported;
+
+  // The main window counts the move as done only once this window shows the
+  // note. If it cannot, the main process closes this window and the main
+  // window shows the note again.
+  const handoffReportedRef = useRef(false);
+  useEffect(() => {
+    if (handoffReportedRef.current || (!unavailable && !memo)) return;
+    handoffReportedRef.current = true;
+    if (unavailable) bridge?.notifyNoteWindowLoadFailed?.();
+    else bridge?.notifyNoteWindowReady?.();
+  }, [bridge, memo, unavailable]);
+
+  useEffect(() => bridge?.onNoteWindowSync?.((update) => {
+    // Same order as the main window: advance the editor's sync state, then
+    // reload the note so remote changes reach it.
+    window.dispatchEvent(new CustomEvent("edgeever:sync-completed", { detail: noteWindowSyncCompletedDetail(memoId, update) }));
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["memo", memoId] }),
+      queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+    ]);
+  }), [bridge, memoId, queryClient]);
 
   useEffect(() => {
     document.title = memo ? `${getMemoDisplayTitle(memo.title, t("common.untitledMemo"))} · EdgeEver` : "EdgeEver";
@@ -143,7 +170,7 @@ export const NoteWindowApp = ({ memoId }: { memoId: string }) => {
     window.close();
   }, [bridge, repository]);
 
-  if (sessionQuery.isError || memoQuery.isError || unsupported) {
+  if (unavailable) {
     return (
       <main className="flex h-[100dvh] items-center justify-center bg-background px-6 text-center">
         <div className="flex max-w-sm flex-col items-center gap-3">

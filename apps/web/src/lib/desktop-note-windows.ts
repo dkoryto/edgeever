@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { MemoDetail } from "@edgeever/shared";
 
 export const NOTE_WINDOW_QUERY_PARAM = "noteWindow";
 const MEMO_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
@@ -33,3 +34,34 @@ export const useDetachedMemoIds = () => {
 
   return [memoIds, setMemoIds] as const;
 };
+
+/** The `edgeever:sync-completed` event detail that EditorPane reads. */
+export type NoteWindowSyncCompletedDetail = {
+  failed?: number;
+  conflicted?: number;
+  syncedMemos?: ReadonlyMap<string, MemoDetail>;
+};
+
+/**
+ * Sync runs in the main window. This picks the part of a sync result that the
+ * window showing `memoId` needs: failure and conflict counts, and the note as
+ * acknowledged when this sync included it.
+ */
+export const noteWindowSyncUpdate = (
+  detail: NoteWindowSyncCompletedDetail | null | undefined,
+  memoId: string,
+): DesktopNoteWindowSyncUpdate => ({
+  failed: detail?.failed ?? 0,
+  conflicted: detail?.conflicted ?? 0,
+  memo: detail?.syncedMemos?.get(memoId) ?? null,
+});
+
+/** Rebuilds, inside the note window, the sync event its editor listens for. */
+export const noteWindowSyncCompletedDetail = (
+  memoId: string,
+  update: DesktopNoteWindowSyncUpdate,
+): NoteWindowSyncCompletedDetail => ({
+  failed: update.failed,
+  conflicted: update.conflicted,
+  syncedMemos: new Map(update.memo?.id === memoId ? [[memoId, update.memo]] : []),
+});

@@ -2606,6 +2606,7 @@ export const ja = {
     noteWindowUnavailable: "このノートは別のウィンドウで表示できません。削除されたか、メインウィンドウでのみ開ける種類のノートです。",
     closeNoteWindow: "ウィンドウを閉じる",
     noteWindowCloseSaveFailed: "最新の編集を保存できませんでした。問題を解決するか、もう一度閉じると強制的に閉じます。編集はこのデバイスに残り、次にノートを開いたときに復元を提案します。",
+    noteWindowStopped: "ノートのウィンドウが予期せず閉じたため、ノートはこのウィンドウに戻りました。最新の変更を確認してください。未保存の編集はこのデバイスの下書きから再度表示されます。",
     duplicateTitle: "{{title}}（コピー）",
     duplicateFailedTitle: "このノートを複製できませんでした",
     duplicateFailed: "コピーは作成されませんでした。しばらくしてから再試行してください。",

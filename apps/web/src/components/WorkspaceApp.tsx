@@ -139,7 +139,7 @@ import {
 } from "@/lib/desktop-workspace-restore";
 import { EditorPaneErrorBoundary, EditorRecoveryPane } from "./EditorPaneErrorBoundary";
 import { NoteInSeparateWindowPane } from "./NoteInSeparateWindowPane";
-import { canOpenNoteWindows, useDetachedMemoIds } from "@/lib/desktop-note-windows";
+import { canOpenNoteWindows, noteWindowSyncUpdate, useDetachedMemoIds, type NoteWindowSyncCompletedDetail } from "@/lib/desktop-note-windows";
 import { isMarkdownFile, readMarkdownFile } from "@/lib/markdown-file-import";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { createScreenshotMemo, screenshotFileFromImportPayload, screenshotImportDedupeKey, screenshotImportGate } from "@/lib/screenshot-import";
@@ -1551,6 +1551,32 @@ export const WorkspaceApp = ({
   const selectedMemoDetached = Boolean(selectedMemo && detachedMemoIds.has(selectedMemo.id));
   const noteWindowsAvailable = canOpenNoteWindows();
 
+  const returnDetachedMemo = useCallback((memoId: string) => {
+    setDetachedMemoIds((current) => {
+      if (!current.has(memoId)) return current;
+      const next = new Set(current);
+      next.delete(memoId);
+      return next;
+    });
+    void queryClient.invalidateQueries({ queryKey: ["memo", memoId] });
+  }, [queryClient, setDetachedMemoIds]);
+
+  // Sync runs only here. Pass each result on to the note windows so their
+  // editors see acknowledgements, remote changes and conflicts as this one does.
+  const detachedMemoIdsRef = useRef(detachedMemoIds);
+  detachedMemoIdsRef.current = detachedMemoIds;
+  const forwardSyncToNoteWindows = useCallback((detail: NoteWindowSyncCompletedDetail | null) => {
+    const bridge = window.edgeeverDesktop;
+    if (!bridge?.sendNoteWindowSync) return;
+    for (const memoId of detachedMemoIdsRef.current) bridge.sendNoteWindowSync(memoId, noteWindowSyncUpdate(detail, memoId));
+  }, []);
+  useEffect(() => {
+    if (!noteWindowsAvailable) return;
+    const handleSyncCompleted = (event: Event) => forwardSyncToNoteWindows((event as CustomEvent<NoteWindowSyncCompletedDetail>).detail ?? null);
+    window.addEventListener("edgeever:sync-completed", handleSyncCompleted);
+    return () => window.removeEventListener("edgeever:sync-completed", handleSyncCompleted);
+  }, [forwardSyncToNoteWindows, noteWindowsAvailable]);
+
   // Moving a note hands its pending edits over first: the editor saves, and
   // only then does the note leave this window. A failed save keeps it here.
   const handleOpenMemoInNewWindow = useCallback(async (memoId: string) => {
@@ -1561,14 +1587,24 @@ export const WorkspaceApp = ({
       setAppNoticeDialog({ title: t("editor.openInNewWindow"), description: t("editor.openInNewWindowSaveFailed") });
       return;
     }
+    // The main process reports which notes have windows, so this window
+    // follows its list instead of guessing from the call's result.
     try {
       await bridge.openNoteWindow(memoId);
-      setDetachedMemoIds((current) => new Set(current).add(memoId));
     } catch (error) {
+      // The window could not show the note and was closed: the note and its
+      // editor come back here, reloaded from what was saved before the move.
       console.error("Failed to open the note window", error);
-      setAppNoticeDialog({ title: t("editor.openInNewWindow"), description: t("editor.openInNewWindowFailed") });
+      returnDetachedMemo(memoId);
+      const message = String(error instanceof Error ? error.message : error);
+      // Closed before it was ready, by the user or on quit: nothing to report.
+      if (message.includes("note-window-failed:closed")) return;
+      setAppNoticeDialog({
+        title: t("editor.openInNewWindow"),
+        description: message.includes("note-window-failed:note-unavailable") ? t("editor.noteWindowUnavailable") : t("editor.openInNewWindowFailed"),
+      });
     }
-  }, [focusDetachedMemo, selectedMemo?.id, setDetachedMemoIds, t]);
+  }, [focusDetachedMemo, returnDetachedMemo, selectedMemo?.id, t]);
 
   const previousSelectedMemoIdRef = useRef(selectedMemoId);
   useEffect(() => {
@@ -1593,6 +1629,11 @@ export const WorkspaceApp = ({
         queryClient.invalidateQueries({ queryKey: ["notebooks"], refetchType: "inactive" }),
       ]);
       void runQueuedSync();
+      return true;
+    }
+    if (command.startsWith("note-window-failed:")) {
+      returnDetachedMemo(command.slice("note-window-failed:".length));
+      setAppNoticeDialog({ title: t("editor.openInNewWindow"), description: t("editor.noteWindowStopped") });
       return true;
     }
     return false;
@@ -3381,7 +3422,14 @@ export const WorkspaceApp = ({
                   isOnline={isOnline}
                   isSyncingQueuedChanges={isSyncingQueuedChanges}
                   onSyncQueuedChanges={() => void runQueuedSync()}
-                  onDiscardConflicts={() => void discardConflictsNow()}
+                  onDiscardConflicts={() => {
+                    // Only a discard that ran changes what note windows show.
+                    if (!isOnline) return;
+                    void discardConflictsNow().then(
+                      () => forwardSyncToNoteWindows(null),
+                      (error) => console.error("Failed to discard sync conflicts", error),
+                    );
+                  }}
                   onOpenAssets={handleOpenAssets}
                   onOpenTags={handleOpenTags}
                   onOpenTemplates={handleOpenTemplates}

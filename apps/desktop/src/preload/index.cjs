@@ -136,6 +136,14 @@ contextBridge.exposeInMainWorld("edgeeverDesktop", Object.freeze({
   },
   resolveNoteWindowClose: (allowed) => ipcRenderer.send("desktop:note-window-close-result", allowed === true),
   notifyNoteWindowSaved: () => ipcRenderer.send("desktop:note-window-saved"),
+  notifyNoteWindowReady: () => ipcRenderer.send("desktop:note-window-ready"),
+  notifyNoteWindowLoadFailed: () => ipcRenderer.send("desktop:note-window-load-failed"),
+  sendNoteWindowSync: (memoId, update) => ipcRenderer.send("desktop:note-window-sync", memoId, update),
+  onNoteWindowSync: (callback) => {
+    const listener = (_event, update) => callback(update);
+    ipcRenderer.on("desktop:note-window-sync", listener);
+    return () => ipcRenderer.removeListener("desktop:note-window-sync", listener);
+  },
   openMemoInMainWindow: (memoId) => ipcRenderer.invoke("desktop:open-memo-in-main-window", memoId),
   setRichTextHeadingShortcutActive: (active) => {
     ipcRenderer.sendSync("desktop:rich-text-heading-shortcut", active === true);

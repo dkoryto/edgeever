@@ -2617,6 +2617,7 @@ export const zhCN = {
     noteWindowUnavailable: "这条笔记无法在独立窗口中显示。它可能已被删除，或属于只能在主窗口打开的笔记类型。",
     closeNoteWindow: "关闭窗口",
     noteWindowCloseSaveFailed: "最新修改未能保存。请处理问题，或再次关闭窗口以强制关闭；修改会保留在本设备上，再次打开笔记时会提示恢复。",
+    noteWindowStopped: "笔记窗口意外关闭，笔记已回到当前窗口。请检查最近的修改；尚未保存的内容会从本设备的草稿中重新提供。",
     duplicateTitle: "{{title}}（副本）",
     duplicateFailedTitle: "没能创建这条笔记的副本",
     duplicateFailed: "副本未创建，请稍后重试。",

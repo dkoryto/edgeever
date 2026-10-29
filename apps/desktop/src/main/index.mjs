@@ -1766,14 +1766,19 @@ const createNoteWindow = (memoId) => {
     if (url.startsWith("https://") || url.startsWith("http://")) void shell.openExternal(url);
     return { action: "deny" };
   });
+  // A window that cannot show its note is closed so the note returns to the
+  // main window; ERR_ABORTED (-3) only means a navigation was superseded.
   window.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
     void writeDiagnostic("note-window.load-failed", { errorCode, errorDescription, validatedURL, isMainFrame });
+    if (isMainFrame && errorCode !== -3) noteWindows.fail(window.webContents, "load-failed");
   });
   window.webContents.on("render-process-gone", (_event, details) => {
     void writeDiagnostic("note-window.renderer-gone", details);
+    if (details?.reason !== "clean-exit") noteWindows.fail(window.webContents, "renderer-gone");
   });
   void window.loadURL(noteWindowUrl(rendererEntryUrl, memoId)).catch((error) => {
     void writeDiagnostic("note-window.navigation-rejected", { message: String(error?.message || error).slice(0, 2000) });
+    if (!window.isDestroyed()) noteWindows.fail(window.webContents, "load-failed");
   });
   return window;
 };
@@ -1783,6 +1788,10 @@ const noteWindows = createNoteWindowController({
   showWindow,
   onChange: (memoIds) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("desktop:note-windows-changed", memoIds);
+  },
+  onFailed: (memoId, reason, { handedOff }) => {
+    void writeDiagnostic("note-window.failed", { reason, handedOff });
+    if (handedOff) sendDesktopCommand(`note-window-failed:${memoId}`);
   },
 });
 
@@ -2158,14 +2167,31 @@ const startApplication = async () => {
   ipcMain.handle("desktop:note-windows", (event) => (
     event.sender === mainWindow?.webContents ? noteWindows.list() : []
   ));
-  ipcMain.handle("desktop:open-note-window", (event, memoId) => {
+  ipcMain.handle("desktop:open-note-window", async (event, memoId) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error("Note windows must be opened from the main window");
     if (!isValidNoteWindowMemoId(memoId)) throw new Error("Invalid note id");
-    return noteWindows.open(memoId);
+    const result = noteWindows.open(memoId);
+    // The handoff succeeds only once the new window shows the note.
+    if (!await noteWindows.waitUntilReady(memoId)) {
+      // The renderer tells "this note cannot be shown" apart from other failures.
+      throw new Error(`note-window-failed:${noteWindows.failureReason(memoId) ?? "closed"}`);
+    }
+    return result;
   });
   ipcMain.handle("desktop:focus-note-window", (event, memoId) => (
     event.sender === mainWindow?.webContents && isValidNoteWindowMemoId(memoId) ? noteWindows.focus(memoId) : false
   ));
+  ipcMain.on("desktop:note-window-ready", (event) => {
+    if (isAppRendererSender(event)) noteWindows.markReady(event.sender);
+  });
+  ipcMain.on("desktop:note-window-load-failed", (event) => {
+    if (isAppRendererSender(event)) noteWindows.fail(event.sender, "note-unavailable");
+  });
+  // The main window owns sync; it forwards results for a note to that note's window.
+  ipcMain.on("desktop:note-window-sync", (event, memoId, update) => {
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) return;
+    if (isValidNoteWindowMemoId(memoId) && update && typeof update === "object") noteWindows.sendTo(memoId, "desktop:note-window-sync", update);
+  });
   ipcMain.on("desktop:note-window-listening", (event) => {
     if (isAppRendererSender(event)) noteWindows.markListening(event.sender);
   });

@@ -2606,6 +2606,7 @@ export const pl = {
     noteWindowUnavailable: "Tej notatki nie można pokazać w osobnym oknie. Mogła zostać usunięta albo jest typem notatki, który otwiera się tylko w oknie głównym.",
     closeNoteWindow: "Zamknij okno",
     noteWindowCloseSaveFailed: "Nie udało się zapisać ostatnich zmian. Rozwiąż problem albo zamknij okno ponownie, aby je mimo to zamknąć; zmiany zostaną na tym urządzeniu i zostaną zaproponowane przy ponownym otwarciu notatki.",
+    noteWindowStopped: "Okno notatki nieoczekiwanie się zamknęło, więc notatka wróciła do tego okna. Sprawdź ostatnie zmiany; niezapisane edycje zostaną ponownie zaproponowane z wersji roboczej na tym urządzeniu.",
     duplicateTitle: "{{title}} (kopia)",
     duplicateFailedTitle: "Nie udało się zduplikować notatki",
     duplicateFailed: "Kopia nie została utworzona. Spróbuj ponownie za chwilę.",

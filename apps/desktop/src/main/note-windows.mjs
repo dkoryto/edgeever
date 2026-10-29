@@ -14,18 +14,23 @@ export const noteWindowUrl = (entryUrl, memoId) => {
 /**
  * Tracks the separate note windows. A note is shown in at most one of them,
  * and a window closes only after its renderer confirms that pending edits were
- * saved, so closing never silently drops typing.
+ * saved, so closing never silently drops typing. A new window counts as open
+ * only once its renderer reports that the note is shown; a window that fails
+ * to load or crashes is closed so the note returns to the main window.
  */
 export const createNoteWindowController = ({
   createWindow,
   showWindow,
   onChange = () => {},
+  onFailed = () => {},
   forcedCloseTimeoutMs = 5_000,
+  readyTimeoutMs = 30_000,
   now = () => Date.now(),
   setTimer = setTimeout,
   clearTimer = clearTimeout,
 }) => {
   const entries = new Map();
+  const failureReasons = new Map();
 
   const list = () => [...entries.keys()];
   const live = (entry) => entry && !entry.window.isDestroyed();
@@ -47,6 +52,29 @@ export const createNoteWindowController = ({
   const allowClose = (entry) => {
     entry.closeAllowed = true;
     if (live(entry)) entry.window.close();
+  };
+
+  const settleReady = (entry, ready) => {
+    if (entry.readyTimer) clearTimer(entry.readyTimer);
+    entry.readyTimer = null;
+    for (const resolve of entry.readyWaiters.splice(0)) resolve(ready);
+  };
+
+  const failEntry = (entry, reason) => {
+    // A window already being closed on purpose (by the user, on quit) aborts
+    // its own load; that is not a failure to report.
+    if (!live(entry) || entry.failed || entry.closeAllowed) return;
+    entry.failed = true;
+    failureReasons.set(entry.memoId, reason);
+    const handedOff = entry.ready;
+    settleReady(entry, false);
+    entry.closeAllowed = true;
+    // Destroy rather than close: a hung renderer may never finish closing,
+    // and the note must not stay owned by a dead window.
+    entry.window.destroy();
+    // Before the handoff completed, the caller waiting for readiness tells
+    // the user; afterwards nobody is waiting, so the main window must.
+    onFailed(entry.memoId, reason, { handedOff });
   };
 
   const requestClose = (entry, { forced = false } = {}) => {
@@ -81,12 +109,17 @@ export const createNoteWindowController = ({
   const open = (memoId) => {
     if (!isValidNoteWindowMemoId(memoId)) throw new Error("Invalid note id");
     const existing = entries.get(memoId);
-    if (live(existing)) {
+    // A failed window that is still going away is replaced, not reused.
+    if (live(existing) && !existing.failed) {
       showWindow(existing.window);
       return { opened: false };
     }
+    failureReasons.delete(memoId);
     const window = createWindow(memoId);
-    const entry = { memoId, window, closeAllowed: false, closeRequest: null, listening: false };
+    const entry = {
+      memoId, window, closeAllowed: false, closeRequest: null, listening: false,
+      ready: false, readyWaiters: [], readyTimer: null, failed: false,
+    };
     entries.set(memoId, entry);
     window.on("close", (event) => {
       if (entry.closeAllowed) return;
@@ -95,6 +128,7 @@ export const createNoteWindowController = ({
     });
     window.on("closed", () => {
       settleClose(entry, true);
+      settleReady(entry, false);
       if (entries.get(memoId) !== entry) return;
       entries.delete(memoId);
       onChange(list());
@@ -107,6 +141,44 @@ export const createNoteWindowController = ({
     const entry = entries.get(memoId);
     if (!live(entry)) return false;
     showWindow(entry.window);
+    return true;
+  };
+
+  /** Why the window for this note failed, if it did. */
+  const failureReason = (memoId) => failureReasons.get(memoId) ?? null;
+
+  /** Resolves true once the window shows its note, false if it closes or fails first. */
+  const waitUntilReady = (memoId) => {
+    const entry = entries.get(memoId);
+    if (!live(entry)) return Promise.resolve(false);
+    if (entry.ready) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      entry.readyWaiters.push(resolve);
+      entry.readyTimer ??= setTimer(() => failEntry(entry, "timeout"), readyTimeoutMs);
+    });
+  };
+
+  /** The renderer shows its note and owns it from now on. */
+  const markReady = (contents) => {
+    const entry = entryForContents(contents);
+    if (!entry || entry.failed) return false;
+    entry.ready = true;
+    settleReady(entry, true);
+    return true;
+  };
+
+  /** The window could not load or show its note, or its renderer is gone. */
+  const fail = (contents, reason) => {
+    const entry = entryForContents(contents);
+    if (entry) failEntry(entry, reason);
+    return Boolean(entry);
+  };
+
+  /** Deliver a main-window update to the window showing this note. */
+  const sendTo = (memoId, channel, payload) => {
+    const entry = entries.get(memoId);
+    if (!live(entry) || entry.failed) return false;
+    entry.window.webContents.send(channel, payload);
     return true;
   };
 
@@ -135,13 +207,18 @@ export const createNoteWindowController = ({
 
   return {
     closeAll,
+    fail,
+    failureReason,
     focus,
     has: (memoId) => live(entries.get(memoId)),
     isNoteWindowContents: (contents) => Boolean(entryForContents(contents)),
     list,
     markListening,
+    markReady,
     memoIdForContents: (contents) => entryForContents(contents)?.memoId ?? null,
     open,
     resolveClose,
+    sendTo,
+    waitUntilReady,
   };
 };

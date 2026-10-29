@@ -2617,6 +2617,7 @@ export const enUS = {
     noteWindowUnavailable: "This note can't be shown in a separate window. It may have been deleted, or it is a note type that opens only in the main window.",
     closeNoteWindow: "Close window",
     noteWindowCloseSaveFailed: "Your latest edits couldn't be saved. Fix the problem, or close the window again to close it anyway; the edits stay on this device and are offered again when you open the note.",
+    noteWindowStopped: "The note's window closed unexpectedly, so the note is back in this window. Check its latest changes; edits that were not saved yet are offered again from this device's draft.",
     duplicateTitle: "{{title}} (copy)",
     duplicateFailedTitle: "Couldn't duplicate this note",
     duplicateFailed: "The copy was not created. Try again in a moment.",

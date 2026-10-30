@@ -43,19 +43,36 @@ const signalSidecars = (signal) => {
 
 // Pausing storage relies on POSIX signals; Windows runs the other scenarios.
 const pausesStorage = new Set(["D1", "E1"]);
+// A timed-out scenario keeps running against the shared app, so later steps cannot trust its state.
+let timedOut = false;
 const step = async (name, run) => {
   if (only && !only.includes(name.split(":")[0])) return;
+  if (timedOut) {
+    console.log(`SKIP ${name} (an earlier scenario timed out)`);
+    return;
+  }
   if (process.platform === "win32" && pausesStorage.has(name.split(":")[0])) {
     console.log(`SKIP ${name} (needs POSIX signals)`);
     return;
   }
   const started = Date.now();
+  let timer;
   try {
-    await Promise.race([run(), new Promise((_, reject) => setTimeout(() => reject(new Error("step timeout")), 180_000))]);
+    await Promise.race([
+      run(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          reject(new Error("step timeout"));
+        }, 180_000);
+      }),
+    ]);
     results.push({ name, ok: true, ms: Date.now() - started });
   } catch (error) {
     signalSidecars("SIGCONT");
     results.push({ name, ok: false, error: String(error?.message || error).split("\n").slice(0, 6).join(" | ") });
+  } finally {
+    clearTimeout(timer);
   }
   const result = results.at(-1);
   console.log(`${result.ok ? "PASS" : "FAIL"} ${name}${result.ok ? ` (${result.ms} ms)` : `: ${result.error}`}`);
@@ -373,7 +390,12 @@ try {
   });
 } finally {
   signalSidecars("SIGCONT");
-  await Promise.race([application?.close().catch(() => undefined), new Promise((resolveWait) => setTimeout(resolveWait, 20_000))]);
+  let closeTimer;
+  await Promise.race([
+    application?.close().catch(() => undefined),
+    new Promise((resolveWait) => { closeTimer = setTimeout(resolveWait, 20_000); }),
+  ]);
+  clearTimeout(closeTimer);
   server?.stop(true);
   database?.close();
   await rm(directory, { recursive: true, force: true });

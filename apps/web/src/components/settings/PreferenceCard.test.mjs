@@ -28,7 +28,11 @@ describe("editor body font preference", () => {
     expect(editorFonts).toContain("html[data-ui-font]");
     expect(editorFonts).toContain("html[data-ui-font]:not([data-editor-body-font]) .edgeever-editor[data-editor-theme=\"default\"] .ProseMirror");
     expect(editorFonts).toContain("html[data-ui-font] .edgeever-public-share");
-    expect(editorFonts).not.toContain(".edgeever-code-source");
+    // The body font never restyles code; only an explicit code font does.
+    const bodyFontRules = editorFonts.split("}").filter((rule) => rule.includes("[data-editor-body-font]"));
+    expect(bodyFontRules.length).toBeGreaterThan(0);
+    for (const rule of bodyFontRules) expect(rule).not.toContain(".edgeever-code-source");
+    expect(editorFonts).toContain("html[data-editor-code-font] .edgeever-editor .ProseMirror :is(code, pre, .edgeever-code-source)");
     for (const fileName of ["kai.woff2", "kai-screen.woff2", "fangsong.woff2", "song.woff2", "zhi-song.woff2", "hei.woff2", "source-serif-4-regular.woff2", "OFL-lxgw-wenkai.txt", "OFL-zhuque-fangsong.txt", "OFL-source-han-serif.txt", "OFL-source-serif-4.txt", "IPA-lxgw-neo-zhi-song.txt"]) {
       expect(existsSync(new URL(`../../assets/fonts/editor-body/${fileName}`, import.meta.url))).toBe(true);
     }

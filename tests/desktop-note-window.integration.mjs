@@ -391,8 +391,19 @@ try {
     new Promise((resolveWait) => { closeTimer = setTimeout(resolveWait, 20_000); }),
   ]);
   clearTimeout(closeTimer);
-  server?.stdin.end();
-  await rm(directory, { recursive: true, force: true });
+  // Windows keeps the database locked until the API process has exited.
+  if (server && server.exitCode === null) {
+    const exited = new Promise((resolveExit) => server.once("exit", resolveExit));
+    server.stdin.end();
+    let killTimer;
+    await Promise.race([exited, new Promise((resolveWait) => { killTimer = setTimeout(resolveWait, 10_000); })]);
+    clearTimeout(killTimer);
+    if (server.exitCode === null) {
+      server.kill();
+      await exited;
+    }
+  }
+  await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
 }
 
 const failed = results.filter((result) => !result.ok);

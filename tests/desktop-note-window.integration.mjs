@@ -1,12 +1,11 @@
 // Packaged desktop E2E for "open a note in a new window" (#67, #730).
-// Usage: bun tests/desktop-note-window.integration.mjs <packaged executable>
-// Starts an in-process API on a temporary SQLite database, launches the
-// packaged app against it and drives the main window and note windows.
+// Usage: node tests/desktop-note-window.integration.mjs <packaged executable>
+// Starts the test API (tests/desktop-note-window-api.mjs, under Bun) on a
+// temporary SQLite database, launches the packaged app against it and drives
+// the main window and note windows. The driver runs under Node because
+// Playwright cannot open its Electron connection from Bun 1.3.
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { Database } from "bun:sqlite";
-import { fetchEdgeEverApp } from "../apps/api/src/index.ts";
-import { createSelfHostedStorageAdapter } from "../apps/api/src/self-hosted-storage-adapter.ts";
+import { execFileSync, spawn } from "node:child_process";
 import { desktopMenuCopy } from "../apps/desktop/src/main/desktop-menu.mjs";
 import { _electron as electron, expect } from "@playwright/test";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -21,7 +20,6 @@ const profile = join(directory, "profile");
 const results = [];
 let application;
 let server;
-let database;
 let page;
 let note;
 let baseUrl;
@@ -205,20 +203,17 @@ const outboxStatuses = (memoId) => page.evaluate(async (id) => {
 }, memoId);
 
 try {
-  database = new Database(join(directory, "test-api.sqlite"));
-  for (const name of (await readdir("migrations")).filter((name) => name.endsWith(".sql")).sort()) {
-    database.exec(await readFile(join("migrations", name), "utf8"));
-  }
-  database.query("INSERT OR IGNORE INTO workspaces(id,name,is_personal) VALUES ('ws_default','Personal',1)").run();
-  const environment = {
-    storage: createSelfHostedStorageAdapter(database, join(directory, "resources")),
-    EDGE_EVER_ALLOW_UNAUTHENTICATED: "true",
-    EDGE_EVER_RUNTIME: "self-hosted-bun",
-  };
-  server = Bun.serve({ hostname: "127.0.0.1", port: 0,
-    fetch: (request) => fetchEdgeEverApp(request, environment, { waitUntil() {}, passThroughOnException() {} }),
+  server = spawn("bun", ["tests/desktop-note-window-api.mjs", directory], { stdio: ["pipe", "pipe", "inherit"] });
+  baseUrl = await new Promise((resolveUrl, reject) => {
+    let output = "";
+    server.on("error", reject);
+    server.on("exit", (code) => reject(new Error(`test API exited with code ${code}`)));
+    server.stdout.on("data", (chunk) => {
+      output += chunk;
+      const ready = output.match(/READY (\S+)/);
+      if (ready) resolveUrl(ready[1]);
+    });
   });
-  baseUrl = `http://127.0.0.1:${server.port}`;
   notebookId = (await api("/api/v1/notebooks", { method: "POST", body: JSON.stringify({ name: "Note windows" }) })).notebook.id;
   const memoA = await createMemo("Window A", "Alpha body");
   const memoB = await createMemo("Window B", "Bravo body");
@@ -396,8 +391,7 @@ try {
     new Promise((resolveWait) => { closeTimer = setTimeout(resolveWait, 20_000); }),
   ]);
   clearTimeout(closeTimer);
-  server?.stop(true);
-  database?.close();
+  server?.stdin.end();
   await rm(directory, { recursive: true, force: true });
 }
 

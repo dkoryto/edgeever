@@ -26,4 +26,4 @@
 
 ## 安装包端到端测试
 
-`tests/desktop-note-window.integration.mjs`（`bun run verify:desktop-note-window-e2e -- <安装包可执行文件>`）使用打包后的应用和进程内 API（临时数据库）运行主要场景：带未保存修改移动笔记（A1）、从各入口聚焦已有窗口（A2）、笔记窗口的 IPC 限制（A3）、关闭时保存（B1）、两个窗口与链接（C1）、移动前及关闭时保存失败（D1、E1；暂停存储依赖 POSIX 信号，Windows 上跳过）、退出应用（F1）、删除笔记（G1）、渲染进程崩溃（H1）、无法显示的笔记（H2）、其他设备的修改（I1）以及同步冲突（I2）。桌面端发布工作流在 macOS、Windows 和 Linux（通过 `xvfb-run`）的首次启动与协议检查之后运行该测试。
+`tests/desktop-note-window.integration.mjs`（`bun run verify:desktop-note-window-e2e -- <安装包可执行文件>`）使用打包后的应用和测试 API（临时数据库，`tests/desktop-note-window-api.mjs`，在 Bun 下运行；由于 Playwright 无法在 Bun 1.3 下建立 Electron 连接，驱动脚本在 Node 下运行）运行主要场景：带未保存修改移动笔记（A1）、从各入口聚焦已有窗口（A2）、笔记窗口的 IPC 限制（A3）、关闭时保存（B1）、两个窗口与链接（C1）、移动前及关闭时保存失败（D1、E1；暂停存储依赖 POSIX 信号，Windows 上跳过）、退出应用（F1）、删除笔记（G1）、渲染进程崩溃（H1）、无法显示的笔记（H2）、其他设备的修改（I1）以及同步冲突（I2）。桌面端发布工作流在 macOS、Windows 和 Linux（通过 `xvfb-run`）的首次启动与协议检查之后运行该测试。

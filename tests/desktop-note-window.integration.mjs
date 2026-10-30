@@ -124,7 +124,22 @@ const launch = async () => {
     return notebooks.some((notebook) => notebook.id === id);
   }, notebookId), { timeout: 60_000 }).toBe(true);
   // Search covers the selected notebook, and a seeded demo notebook is selected first.
-  await page.getByRole("button", { name: "All notes", exact: true }).click({ timeout: 30_000 });
+  await page.getByRole("button", { name: "All notes", exact: true }).click({ timeout: 30_000 }).catch(async (error) => {
+    await reportStartupState();
+    throw error;
+  });
+};
+
+// Print what the main window shows when startup does not reach the notes list.
+const reportStartupState = async () => {
+  const state = await page.evaluate(() => ({
+    size: `${window.innerWidth}x${window.innerHeight}`,
+    locale: document.documentElement.lang,
+    buttons: [...document.querySelectorAll("button")].map((button) => button.getAttribute("aria-label") || button.innerText.trim()).filter(Boolean).slice(0, 40),
+    text: document.body.innerText.slice(0, 1500),
+  })).catch((error) => ({ error: String(error) }));
+  console.log("Main window at startup failure:", JSON.stringify(state, null, 2));
+  if (process.env.EDGE_EVER_E2E_SCREENSHOT) await page.screenshot({ path: process.env.EDGE_EVER_E2E_SCREENSHOT }).catch(() => undefined);
 };
 
 const noteWindowPage = async (memoId, timeout = 20_000) => {

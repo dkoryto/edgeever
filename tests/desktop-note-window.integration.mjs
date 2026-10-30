@@ -97,10 +97,13 @@ const editOnServer = async (id, suffix) => {
   }) });
 };
 
+// Hosted Windows runners have a 1024x768 screen, which leaves the window below
+// the 1024px desktop layout; a smaller scale factor gives it the desktop layout.
+const displayArgs = process.platform === "win32" ? ["--force-device-scale-factor=0.75"] : [];
 const launch = async () => {
   application = await electron.launch({
     executablePath,
-    args: [`--user-data-dir=${profile}`],
+    args: [`--user-data-dir=${profile}`, ...displayArgs],
     env: { ...process.env, EDGE_EVER_DISABLE_AUTO_UPDATE: "1" },
     timeout: 60_000,
   });

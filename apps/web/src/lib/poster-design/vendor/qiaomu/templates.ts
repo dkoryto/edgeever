@@ -6,6 +6,8 @@ import { Circle, FabricObject, getEnv, Gradient, Line, Polygon, Rect, Shadow, Te
 import { Background } from './model';
 import { GAODING } from './gaoding';
 import { toContrast } from './quality';
+import { paperListPaper } from '../../paper-list-artwork';
+import { parsePaperListRow } from '../../paper-list-content';
 
 /** Colours a template reads. An assistant (or the user) can override any of them without touching layout. */
 export interface Palette { bg: string; bg2: string; ink: string; sub: string; accent: string; accentInk: string }
@@ -175,6 +177,105 @@ const shadowSoft = (u: number): Shadow => new Shadow({ color: 'rgba(0,0,0,0.25)'
 const shadowHard = (u: number, c = '#000000', d = 8): Shadow => new Shadow({ color: c, blur: 0, offsetX: d * u, offsetY: d * u });
 
 export const TEMPLATES: Template[] = [
+  {
+    ...posterDesignTemplate("paper-list"),
+    build(i) {
+      const p = palette(i, { bg: '#f4f3ee', bg2: '#f4f3ee', ink: '#080907', sub: '#272923', accent: '#080907', accentInk: '#f4f3ee' });
+      const { u, w, h } = metrics(i);
+      const bookText = (...args: Parameters<typeof textbox>) => {
+        const box = textbox(...args);
+        if (!hasCjk(box.text)) {
+          const lines = wrapLines(args[0], box.width * 0.98, box.fontSize, String(box.fontWeight), box.charSpacing, box.fontFamily);
+          if (lines.length > 1 && /^\S{1,3}$/.test(lines.at(-1)!)) {
+            const previous = lines.at(-2)!.split(' ');
+            const last = `${previous.at(-1)} ${lines.at(-1)}`;
+            if (previous.length > 1 && measure(last, box.fontSize, String(box.fontWeight), box.fontFamily) < box.width * 0.98) {
+              previous.pop();
+              lines[lines.length - 2] = previous.join(' ');
+              lines[lines.length - 1] = last;
+            }
+          }
+          Object.assign(box, { qcWrapped: true, qcSource: args[0] });
+          box.set({ text: lines.join('\n') });
+          box.initDimensions();
+        }
+        return box;
+      };
+      const margin = Math.min(w, h) * 0.065;
+      const inner = w * 0.855;
+      const headingFace = typeFor('title', SERIF, 'bold');
+      const rows = (i.points?.length ? i.points : i.subtitle.split(/\n\s*\n/)).map(value => value.trim()).filter(Boolean);
+      const label = i.badge?.trim() ? bookText(i.badge, margin, margin * 0.6, inner, { qcRole: 'badge', fontSize: 17 * u, fill: p.sub }) : undefined;
+      const titleTop = label ? label.top + label.height + 16 * u : margin * 0.92;
+      const titleWeight = headingFace.fontWeight ?? 'bold';
+      const oneLineSize = inner * 0.99 / Math.max(1, measure(i.title, 1, titleWeight));
+      const titleSize = !i.title.includes('\n') && oneLineSize >= 64 * u
+        ? Math.min(116 * u, oneLineSize)
+        : Math.min(116 * u, fitTitle(i.title, inner, h * 0.23, 116 * u, 22 * u, 1.06));
+      const title = bookText(i.title, w * 0.057, titleTop, inner, { qcRole: 'title', fontSize: titleSize, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.06 });
+      const start = title.top + title.height + 14 * u;
+      const objects: FabricObject[] = [title, rule(w * 0.078, start, w * 0.824, p.ink, Math.max(1, 2.7 * u))];
+      if (label) objects.push(label);
+      // Actual Fabric heights keep headings and paragraphs together at every aspect ratio.
+      // All supplied entries survive; fit the entire list instead of truncating it.
+      const numberWidth = Math.min(w * 0.15, 156 * u);
+      const headingX = w * 0.195;
+      const subheadingX = w * 0.225;
+      const columnX = w * 0.185;
+      const columnWidth = w * 0.71;
+      const ruleX = w * 0.202;
+      const renderRows = (scale: number) => {
+        const result: FabricObject[] = [];
+        let y = start + 22 * u;
+        rows.forEach((row, index) => {
+          const { heading, subtitle, body: bodyText } = parsePaperListRow(row);
+          const head = bookText(heading!, headingX, y + 39 * u * scale, w * 0.66, { fontSize: 66 * u * scale, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.12, ...headingFace });
+          Object.assign(head, { qcName: `paper-list:row:${index}:heading` });
+          const numberText = `${index + 1}.`;
+          const numeralSize = 167 * u * scale;
+          const number = bookText(numberText, margin, y + 5 * u * scale, numberWidth, { fontSize: numeralSize * Math.min(1, numberWidth * 0.98 / measure(numberText, numeralSize, 'normal', '思源宋体')), fill: p.ink, fontFamily: '思源宋体', lineHeight: 1 });
+          const plusSize = 36 * u * scale;
+          const plusX = w * 0.865 - plusSize / 2;
+          result.push(number, head,
+            rule(plusX, y + 110 * u * scale, plusSize, p.ink, Math.max(1, 1.5 * u)),
+            rule(plusX + plusSize / 2, y + 110 * u * scale - plusSize / 2, plusSize, p.ink, Math.max(1, 1.5 * u), true));
+          let bottom = Math.max(head.top + head.height, number.top + number.height);
+          if (subtitle) {
+            const subhead = bookText(subtitle, subheadingX, head.top + head.height + 7 * u * scale, w * 0.63, { fontSize: 45 * u * scale, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.1, ...headingFace });
+            Object.assign(subhead, { qcName: `paper-list:row:${index}:subtitle` });
+            result.push(subhead);
+            bottom = Math.max(bottom, subhead.top + subhead.height);
+          }
+          const ruleY = bottom + 10 * u * scale;
+          result.push(rule(ruleX, ruleY, w * 0.7, p.ink, Math.max(1, 2.4 * u)));
+          if (bodyText) {
+            let paragraphY = ruleY + (index === 0 ? 56 : 32) * u * scale;
+            bodyText.split('\n').forEach((paragraph, paragraphIndex) => {
+              const body = bookText(paragraph, columnX, paragraphY, columnWidth, { fontSize: 31 * u * scale, fill: p.sub, lineHeight: 1.45, fontFamily: i.zh ? '思源黑体' : 'Inter' });
+              Object.assign(body, { qcName: paragraphIndex === 0 ? `paper-list:row:${index}:body` : `paper-list:row:${index}:paragraph:${paragraphIndex}` });
+              result.push(body);
+              bottom = body.top + body.height;
+              paragraphY = bottom + 26 * u * scale;
+            });
+          } else bottom = ruleY;
+          y = bottom + 14 * u * scale;
+        });
+        return { objects: result, bottom: y - 14 * u * scale };
+      };
+      let scale = 1;
+      let list = renderRows(scale);
+      for (let pass = 0; list.bottom > h - Math.min(margin, h * 0.01) && pass < 80; pass++) {
+        scale *= 0.96;
+        list = renderRows(scale);
+      }
+      const watermarks = [
+        bookText('… a few notes from the reading room', -w * 0.23, h * 0.54, w * 1.45, { fontSize: 68 * u, fill: p.ink, fontFamily: '思源宋体', fontStyle: 'italic', angle: 19, opacity: 0.055 }),
+        bookText('of the pages we keep returning to …', -w * 0.09, h * 0.89, w * 1.42, { fontSize: 59 * u, fill: p.ink, fontFamily: '思源宋体', fontStyle: 'italic', angle: -15, opacity: 0.045 }),
+      ];
+      watermarks.forEach(mark => Object.assign(mark, { qcName: 'paper-list:watermark' }));
+      return { background: solid(p.bg), objects: [...paperListPaper(w, h, p.ink), ...watermarks, ...objects, ...list.objects] };
+    },
+  },
   {
     ...posterDesignTemplate("minimal"),
     build(i) {
@@ -1177,7 +1278,7 @@ for (let k = TEMPLATES.length - 1; k >= 0; k--) if (RETIRED.has(TEMPLATES[k]!.id
 const MOODY = new Set(['neon', 'cinema', 'quote']); // dark by nature: still available, but never the first thing a new user sees
 TEMPLATES.unshift(...GAODING, ...STUDIO.filter(t => !MOODY.has(t.id)), ...PREMIUM.filter(t => !MOODY.has(t.id)), ...PREMIUM.filter(t => MOODY.has(t.id)), ...STUDIO.filter(t => MOODY.has(t.id)));
 // The first screen of the gallery alternates quiet and loud, paper and colour, so the range is visible without scrolling.
-const LEAD = ['folio', 'brush', 'keyword', 'regeng', 'highlight', 'frame', 'sage', 'notes', 'interview', 'riso', 'kicker', 'numeral', 'calendar', 'ticket', 'corner', 'polaroid', 'serial', 'chat', 'window', 'newspaper', 'stack', 'bili', 'pop'];
+const LEAD = ['paper-list', 'folio', 'brush', 'keyword', 'regeng', 'highlight', 'frame', 'sage', 'notes', 'interview', 'riso', 'kicker', 'numeral', 'calendar', 'ticket', 'corner', 'polaroid', 'serial', 'chat', 'window', 'newspaper', 'stack', 'bili', 'pop'];
 // Looks built on mesh gradients and soft glows read as generic in a feed, so they are offered last.
 const GRADIENT_LED = new Set(['acid', 'glass']); TEMPLATES.sort((x, y) => (LEAD.indexOf(x.id) + 1 || (GRADIENT_LED.has(x.id) ? 199 : 99)) - (LEAD.indexOf(y.id) + 1 || (GRADIENT_LED.has(y.id) ? 199 : 99)));
 

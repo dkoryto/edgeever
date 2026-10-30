@@ -1218,7 +1218,7 @@ export default function PosterEditorPane({
     const value = current.current.document;
     setTemplateFontsLoading(true);
     try {
-      const built = await applyPosterDesign(value, id, zh, width, height);
+      const built = await applyPosterDesign(value, id, zh, width, height, { title: t("poster.defaultHeading"), subtitle: t("poster.defaultSubtitle") });
       return { ...built, platformId };
     } finally { setTemplateFontsLoading(false); }
   };

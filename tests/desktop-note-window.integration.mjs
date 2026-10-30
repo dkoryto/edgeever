@@ -122,10 +122,11 @@ const launch = async () => {
   page = main;
   note = undefined;
   // Wait until the first sync brought the test notebook into local storage.
+  // The sidecar can still be starting right after the reload.
   await expect.poll(() => page.evaluate(async (id) => {
     const { notebooks } = await window.edgeeverDesktop.sidecarRequest("notebook.list");
     return notebooks.some((notebook) => notebook.id === id);
-  }, notebookId), { timeout: 60_000 }).toBe(true);
+  }, notebookId).catch(() => false), { timeout: 60_000 }).toBe(true);
   // Search covers the selected notebook, and a seeded demo notebook is selected first.
   await page.getByRole("button", { name: "All notes", exact: true }).click({ timeout: 30_000 }).catch(async (error) => {
     await reportStartupState();

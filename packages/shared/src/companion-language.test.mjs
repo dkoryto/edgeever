@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { enUS } from "./i18n/en-US.ts";
+import { ja } from "./i18n/ja.ts";
+import { pl } from "./i18n/pl.ts";
+import { ru } from "./i18n/ru.ts";
+import { zhCN } from "./i18n/zh-CN.ts";
 import { CompanionTurnInputSchema, companionTurnLocale, conversationLanguage, translationTargetInstruction } from "./companion.ts";
 
 const locale = (message, recent, fallback) => conversationLanguage(message, recent, fallback);
@@ -53,5 +58,22 @@ describe("companion conversation language", () => {
     expect(companionTurnLocale("de-DE")).toBe("en-US");
     expect(companionTurnLocale(null)).toBe("en-US");
     expect(CompanionTurnInputSchema.shape.locale.parse("ru")).toBe("ru");
+  });
+
+  test("generated translation actions in every interface language are not conversation evidence", () => {
+    for (const catalog of [zhCN, enUS, ja, pl, ru]) {
+      const { selection, skillPrompts } = catalog.aiAssistant.sidebar;
+      const prompts = [
+        skillPrompts.translate,
+        `${selection.translatePrompt}\n\nHello world`,
+        `${selection.translateLanguagePrompt.replace("{{language}}", "English")}\n\nHello world`,
+      ];
+      for (const prompt of prompts) {
+        expect(locale(prompt, ["Please summarize this note"], "en-US")).toEqual({ locale: "en-US", source: "recent conversation" });
+      }
+    }
+    // The case from the review: a Russian UI must keep the earlier English conversation.
+    expect(locale("Переведи то, что я сейчас смотрю, и ответь переводом.", ["Please summarize this note"], "en-US"))
+      .toEqual({ locale: "en-US", source: "recent conversation" });
   });
 });

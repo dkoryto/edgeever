@@ -58,7 +58,7 @@ const messageLanguage = (message: string): ConversationLanguage | "latin" | null
   const request = requestText(message);
   // Sidebar translation actions generate localized prompts. Their wording is
   // interface text, not evidence of the user's conversation language.
-  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment)/iu.test(request)) return null;
+  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|请把下面这段翻译成|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment|Переведи то, что я сейчас смотрю|Переведи отрывок ниже)/iu.test(request)) return null;
   if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(request)) return "ja";
   if (/\p{Script=Han}/u.test(request)) return "zh-CN";
   if (/\p{Script=Cyrillic}/u.test(request)) return "ru";

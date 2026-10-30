@@ -11,7 +11,7 @@ const scanned = ["apps/web/src", "apps/desktop/src", "apps/api/src", "apps/exten
 const skippedDirectories = new Set(["node_modules", "dist", "i18n"]);
 
 const languagePatterns = [
-  /(?:locale|language|lang|lng|resolvedLanguage)\b[\w?.()]*\s*[!=]==\s*["'](?:zh|en|ja|pl|ru)\b/i,
+  /(?:locale|language|lang|lng|resolvedLanguage)\b[\w?.()"']*\s*[!=]==\s*["'](?:zh|en|ja|pl|ru)\b/i,
   /["'](?:zh|en|ja|pl|ru)(?:-[A-Za-z]+)?["']\s*[!=]==\s*[\w?.]*(?:locale|language)\b/i,
   /\.startsWith\(\s*["'](?:zh|en|ja|pl|ru)\b/,
   /\b(?:english|chinese|isEnglish|isChinese|isZh|isEn)\s*\?/,
